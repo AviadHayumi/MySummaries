@@ -1,0 +1,27 @@
+Nan
+    NaN property represents a value that is “not a number” ("abc" / 4)
+    console.log(typeof NaN === "number");  // logs "true"
+    console.log(NaN === NaN);  // logs "false"
+    Number.isNaN()
+
+comparision numbers
+    console.log(0.1 + 0.2);
+    console.log(0.1 + 0.2 == 0.3);
+    
+    returns
+    
+    0.30000000000000004
+    false
+
+    Soultion :
+    function areTheNumbersAlmostEqual(num1, num2) {
+        return Math.abs( num1 - num2 ) < Number.EPSILON;
+    }
+    console.log(areTheNumbersAlmostEqual(0.1 + 0.2, 0.3));
+
+    nan2
+    1undefined22
+    nan2
+    undefiend112
+    nan2 V
+    nan V
