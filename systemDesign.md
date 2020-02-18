@@ -1,5 +1,8 @@
 # System Design
 
+![image info](https://www.dirk-benkert.de/images/dist-system-2.jpg)
+
+
 ## Load balancers 
 there are 2 types :
 - hardware 
