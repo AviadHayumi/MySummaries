@@ -39,13 +39,13 @@ we can do it in 2 ways
 
 
 
-# BREIF OF JS 
+# BRIEF OF JS 
 pardigms :
 - weakly typed (you dont have to declate the type).
 - oop 
 - versatile langugue (js run on browser/pc/server can run on diffrent platform)
 
-## Varibales 
+## Variables 
 we can declare varibale by 3 keywords.
 - var
 - let
@@ -122,7 +122,7 @@ console.log(a) //88
 console.log(b)//1
 ```
 
-        
+
 > reference ,stored on the heap
 
 Type of reference : 
@@ -276,7 +276,7 @@ req.on('end',()=> {...}) //when stream has done
 ```
 
 Example of recive data from request
- 
+
 ```javascript
 const body = [];
 req.on('data', (chunk) => body.push(chunk))
@@ -314,18 +314,24 @@ type of errors :
 - logical errors - you wont get error message , app just not worked (test/debugger)
 
 # EXPRESS JS
-what is it express ?
+### what is it express ?
 remember that we would like to get request content in node ?
 we would have to listen to data , listen to end of the data
 and then parse it to required input.
+
 this is nice to learn but in production this is useless.
-we want to focus on the buisness logic and not in boilar plate staff.
+we want to focus on the business logic and not in boiler plate staff.
+
 express wrap node , and let us focus on the bl.
-no more all routes in one place diveded by if/else statements , no more listen for buffer.
+no more all routes in one place divided by if/else statements , no more listen for buffer.
 
-how to install ? just type npm install --save express
+how to install ? just type ```npm i --save express```
 
-what express is built on ? MIDDLEWEAR 
+
+
+### what express is built on ?
+
+ MIDDLEWEAR 
 
 lets call express instance app
 when we use app.use((req,res,next)=>{...}) this will occur on each request
@@ -464,24 +470,33 @@ const edit = req.query.edit
 quikcer than store in file,
 we dont have to search whole file to find tiny information
 
-sql vs no sql
+## SQL VS NO.SQL
 
-sql relates on tables. 
-each row called record.
-you can relate between diffrent tables
-we have data schema (define how table will look like) each record has follow schema
-Data Relations (One-to-One , One-to-Many , Many-to-Many)
-sql means stractred query langugue (looks like english , SELECT * FROM users WHERE age > 28)
-vertical scaling. (scaling by adding more cpu,memory)
-limitations for lots read&write queires per secons
+### SQL
 
-no-sql 
-you have db that store collections(=equivliant to table), 
-each collection store document(equivliant to record)
-no sql doesnt have strict schema , we usally duplicates data.
-no data relations.
-horizontal scaling. (scaling by adding servers)
-great performance for mass read & write requests
+- relates on tables, each row called record.
+
+- you can relate between different tables
+
+- we have data schema (define how table will look like) each record has follow schema
+  Data Relations (One-to-One , One-to-Many , Many-to-Many)
+
+- SQL means Structured Query Language (looks like English , ```SELECT * FROM users WHERE age > 28)```
+
+- vertical scaling. (scaling by adding more cpu,memory)
+
+- limitations for lots read&write queries per seconds
+
+  
+
+### NO.SQL
+
+- you have db that store collections(=equivalent to table), 
+- each collection store document(equivalent to record)
+- doesn't have strict schema , we usually duplicates data.
+- no data relations.
+- horizontal scaling. (scaling by adding servers)
+- great performance for mass read & write requests
 
 # MY SQL
 
@@ -508,7 +523,7 @@ const sqlPool = mysql.createPool(config)
 module.exports = sqlPool;
 ```
 
-whenever you want to integrate with db,
+whenever you want to integrate with db.
 import sqlPool
 and by sqlPool.execute('run you sql command').then().catch()
 this is supporting promise  
@@ -531,10 +546,10 @@ path: '/products'
 };
 ```
 
-## sequlize
-let you foucus on your model logic.
+## Sequlize
+Sequlize let you focus on your model logic.
 
-**genreate behind the scens the sql query**
+**genreate behind the scens the sql query.**
 
 sequlize need the mysql2 that we have installed
 to start with sequlize we have to inital it 
@@ -543,7 +558,7 @@ so we should create new moudle named database (or whatever you want)
 we are going to inital the connection via sequlize
 
 
-   
+
 1. Inital Sequlize.
  ```javascript
 const sequelize = new Sequelize('db-name', 'username', 'password', {
@@ -551,7 +566,7 @@ dialect: 'mysql',
 host: 'localhost',
 port: 3308
 });
-```
+ ```
 2. then in app we are going to inital all the modles 
 (behind the scens what runs is sql query for create table if not exists for each model)
 for exmaple :
@@ -629,5 +644,258 @@ SELECT * FROM cars
 
 
 
+# MongoDB
 
+MongoDB is basically NO.SQL database.
+
+His name was taken from the word Humongous because one of his main target is to store and work with a lot of data , with nice scaling.
+
+Mongo use json to store documents , actually mongo db store the json in bson format.
+
+
+
+when using nodejs and node , best practice is to create user in mongo with read&write prefrences this user will be used in nodejs application.
+
+
+
+```npm i --save mongodb``` 
+
+
+
+
+
+# Mongoos
+
+mongoos is odm for mongo which similar to orm.
+
+object document model.
+
+we works with schema and models
+
+
+
+npm i --save mongoose
+
+mongoose manage the connection to the database.
+
+```javascript
+(async () => {
+try {
+	const result = await mongoose.connect('dburl')
+	console.log('mongodb connected')
+	app.listen(port)
+}
+catch(err){
+    console.log(err)
+}
+})()
+```
+
+
+
+### working with models
+
+For working with model , we have to define a schema :
+
+```javascript
+const {Schema} = require('mongoose')
+
+const productSchema = new Schema({
+    title : {
+        type : String,
+        required : true
+    },
+    price : {
+        type : Number,
+        required : true
+    },
+    description : {
+        type : String,
+        required : true
+    },
+    imageUrl : {
+        type : String,
+        required : true
+    }
+});
+
+```
+
+No worried we will be able to change the schema on the flight.
+
+required means we have to have this field.
+
+type meaning is what is the type of field.
+
+
+
+save will save if not exists else update.
+
+
+
+populate is like join
+
+```javascript
+const products = await Product.find().populate('userId')
+```
+
+will give us products not with userId field but with the entire user that is related to this.
+
+
+
+select is like project
+
+```javascript
+const products = Product.find().select("title price -Id")
+```
+
+will be converted to this mongo query 
+
+```javascript
+db.products.find().project({title : 1, price : 1, _id :0})
+```
+
+will not present id. 
+
+to make references in schema the field that is referring to another collection will contain
+
+```javascript
+   type : Schema.Types.ObjectId,
+                ref : 'Product',
+                required : true
+```
+
+ref will represent reference to another model.
+
+### Add new functionality to our model
+
+
+
+
+
+# Sessions & Cookies
+
+Let's assume we want to create login page for our website.
+
+As first step we expose some element in our nav-ar as condition if user is logged in.
+
+
+
+We can save on request data , 
+
+So what we can do is save on request information of isLoggedIn
+
+```javascript
+req.isLoggedIn = true
+```
+
+**but** our big problem is that when we send response the information that we've saved on the request is not available for us.
+
+
+
+What we can do in these case is using cookie.
+
+if you would like to save some data in the browser you can do it by  sending header with data.
+
+```javascript
+res.setHeader('Set-Cookie','loggedIn=true')
+```
+
+
+
+now after this change , the browser default send the cookie data no matter what is it the request.
+
+For access the cookie from our server we can do it by  
+
+```javascript
+req.get('Coockie')
+```
+
+we will get text of all of our cookies data
+
+for example ``` isLoggedIn=true;isBlackTheme=true``` 
+
+
+
+we've a big problem with this approach , the user can easily change the cookie.
+
+to access the cookie the user can open devTools and change the cookie to whatever he would like to.
+
+for example if we have ```isVipUser=false;``` the user can easily make this to true ```isVipUser=true```
+
+
+
+the cookie don't need to be related to your page ,
+
+google can track our use of website by cookies.
+
+
+
+## Configure Cookie
+
+1. put ttl to the cookie. 	
+
+```javascript
+res.setHeader('Set-Cookie','loggedIn-true; Max-Age=10' )
+```
+
+2. Domain , where to send the cookies
+
+```javascript
+res.setHeader('Set-Cookie','loggedIn-true; Domain=url' )
+```
+
+3. serve cookies only if there is ssl layer (https)
+
+```javascript
+res.setHeader('Set-Cookie','loggedIn-true; Secure' )
+```
+
+4. HttpOnly - can't access cookie from client side javascript (rescue from attack scripting) 
+
+```javascript
+res.setHeader('Set-Cookie','loggedIn-true; HttpOnly' )
+```
+
+
+
+## Sessions
+
+instead of save the information of user is logged In on the client side , which is bad practice save it in the back-end. 
+
+this called session , a construct between user and server.
+
+Session is saved in the database.
+
+The client save in the cookie the id of the session.
+
+the id that we store is usually hashed with an algorithm.
+
+
+
+### session & express
+
+first install this package
+
+```javascript
+npm i --save express-session 
+```
+
+```javascript
+const session = require('express-session')
+```
+
+ ```javascript
+app.use(session({
+  secret: 'my secret', 
+  resave: false , 
+  saveUninitialized : false  
+}));
+
+/*
+secret - sign the hash
+resave - sion will not be saved on every respone that change but only in change
+saveUninitialized - ensure that no session gets saved for a request where it doesn't need to be saved because nothing was changed
+*/
+ ```
 
