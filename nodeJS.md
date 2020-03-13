@@ -1127,3 +1127,11 @@ exports.postLogin = async(req,res,next) => {
 
 
 
+## Cross Site Request Forgery Attack
+
+CSRF is common attack that the hacker using the cookies&sessions to do whatever he want.
+
+he take to cookie , and sending to server by api what he want like transfer money from place a to b.
+
+To prevent this attack what we can do is generate hash in client form , and check when the request occur that the hash from form is valid , we can assure that the request will be only from ui website.
+
