@@ -873,7 +873,7 @@ the id that we store is usually hashed with an algorithm.
 
 
 
-### session & express
+### Session & Express
 
 first install this package
 
@@ -889,13 +889,241 @@ const session = require('express-session')
 app.use(session({
   secret: 'my secret', 
   resave: false , 
-  saveUninitialized : false  
+  saveUninitialized : false,
+  cookie : {
+      Max-age:10,
+      ...
+  }
 }));
 
 /*
 secret - sign the hash
 resave - sion will not be saved on every respone that change but only in change
-saveUninitialized - ensure that no session gets saved for a request where it doesn't need to be saved because nothing was changed
+saveUninitialized - ensure that no session gets saved for a request where it doesn't need to be saved because nothing was changed,
+coockie - configure the cookie properties
 */
  ```
+
+we can do this 
+
+```javascript
+req.session.isLoggedIn = true;
+```
+
+what the client will see is this 
+
+```javascript
+connect.sid : s%3AzgQll73ywznmerr-7Xt58yw-Aa4CHM2i.Te69dgmZv0465s0EG8Vv3f4hXHoIupttWCQEAB0JUnI
+```
+
+instead of 
+
+```javascript
+isLoggedIn = true
+```
+
+now we can be sure that the client cannot play with the cookie property.
+
+in the server side we don't have to decode this hashed value , this happens automatically by the middle-ware 
+
+```javascript
+console.log(req.session.isLoggedIn)
+```
+
+
+
+actually as we can see , the data is hashed and saved in the client side , only the server-side can decode the hashed data and get the value from there.
+
+with this way we can protect the data.
+
+
+
+## Integrate MongoDB with sessions
+
+install package
+
+```javascript
+sudo npm i --save connect-mongodb-session
+```
+
+```javascript
+const MongoDBStore = require('connect-mongodb-session')(session);
+```
+
+```javascript
+const store = new MongoDBStore({
+  uri:mongoUri,
+  collection: 'sessions'
+});
+```
+
+```javascript
+app.use(session({
+  secret: 'my secret', 
+  resave: false , 
+  saveUninitialized : false,  
+  store : store
+}));
+```
+
+now we can see that the session is stored on our database.
+
+```json
+{
+	"_id" : "7VyRgRK1YlyL7ra6ujowcMPoTx_Avxid",
+	"expires" : ISODate("2020-03-21T22:19:53.234Z"),
+	"session" : {
+		"cookie" : {
+			"originalMaxAge" : null,
+			"expires" : null,
+			"secure" : null,
+			"httpOnly" : true,
+			"domain" : null,
+			"path" : "/",
+			"sameSite" : null
+		},
+		"isLoggedIn" : true
+	}
+}
+```
+
+
+
+we can delete session from browser and from database by 
+
+```javascript
+ req.session.destroy(()=>{
+     //action to prefrom when session is destoryed , for example : 
+     res.redirect('/');
+ });
+```
+
+
+
+# Authentication
+
+## Protect Routes
+
+so we would like to add authentication to our app.
+
+we're going to save on the session :
+
+- the user information
+- is loggedIn
+
+each time the user try to access route that required authentication , we'll check if the user loggedIn from session.
+
+if not loggedIn  we'll redirect him to loggin.
+
+
+
+```javascript
+module.exports = (req,res,next) => {
+    if(!req.session.isLoggedIn){
+        return  res.redirect('/');
+    }
+    next();
+}
+```
+
+
+
+now we are going to put this middleware on required routes
+
+```javascript
+const isAuth = require('../middlewares/is-auth');
+router.post('/cart-delete-item', isAuth , shopController.postCartDeleteProduct);
+
+```
+
+
+
+put attention that we can put in post/get/delete/use/put/etc... as much function of req,res,next as we want.
+
+the middleWares will be called from left to right.
+
+
+
+## SignUp
+
+so we've protected our routes , now let's get into create user.
+
+user will contain :
+
+- username
+- password
+
+we don't want to save user password as is in datbase , so what we are going to do is hash it with bycrpt.
+
+```javascript
+const bcrypt = require('bcryptjs');
+exports.postSignup = async(req,res,next) => {
+  console.log(req.body)
+  const email = req.body.email;
+  const password = req.body.password;
+  const confirmPassword = req.body.confirmPassword;
+
+  try{
+    const isUserExists = await User.findOne({email : email});
+    if(isUserExists){
+      return res.redirect('/signup');
+    }
+    
+    const hashedPassword = await bcrypt.hash(password, 12); //generate hash password
+
+    const user = new User({
+      email: email,
+      password : hashedPassword,
+      cart : {items : [] }
+    })
+
+    const result = await user.save();
+
+    if(result){
+       res.redirect('/login');
+    }
+
+  }catch(err){
+    console.log(err);
+  }
+
+
+  next();
+}
+```
+
+
+
+## Login
+
+```javascript
+exports.postLogin = async(req,res,next) => {
+  try{
+    const email = req.body.email;
+    const password = req.body.password;
+
+    const user = await User.findOne({email : email});
+    if(!user){
+      return  res.redirect('/login');
+    }
+
+    const isPasswordEquals = await bcrypt.compare(password,user.password);
+
+    if(!isPasswordEquals){
+      return  res.redirect('/login');
+    }
+
+    req.session.isLoggedIn = true;
+    req.session.user = user;
+    req.session.save(()=>{
+      res.redirect('/');
+    })
+
+  }catch(err){
+    console.log(err);
+  }
+}
+```
+
+
 
