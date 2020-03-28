@@ -11,6 +11,7 @@ Engine means takes js code and compiles it to machine code.
 
 v8 is written by c++
 nodejs takes v8 and add some features likes : 
+
 - filesystem
 - network
 - operating system
@@ -1134,4 +1135,627 @@ CSRF is common attack that the hacker using the cookies&sessions to do whatever 
 he take to cookie , and sending to server by api what he want like transfer money from place a to b.
 
 To prevent this attack what we can do is generate hash in client form , and check when the request occur that the hash from form is valid , we can assure that the request will be only from ui website.
+
+
+
+```javascript
+npm i --save csurf
+```
+
+
+
+```javascript
+const csrf = require('csurf');
+app.use(csrfProtection);
+```
+
+
+
+when we render the views , we'll pass the token
+
+```javascript
+exports.getIndex = (req, res, next) => {
+  Product.find()
+    .then(products => {
+      res.render('shop/index', {
+        prods: products,
+        pageTitle: 'Shop',
+        path: '/',
+        isAuthenticated: req.session.isLoggedIn,
+        csrfToken : req.csrfToken()
+      });
+    })
+    .catch(err => {
+      console.log(err);
+    });
+};
+```
+
+```ejs
+ <form action="/logout" method="post">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>"
+                        <button type="submit">Logout</button>
+ </form>
+```
+
+name=```_csrf``` is to identify from where input the csrf value token exists.
+
+
+
+instead of inject in in each time rendering views
+
+```javascript
+ isAuthenticated: req.session.isLoggedIn,
+  csrfToken : req.csrfToken()
+```
+
+what we can do is inject in automatically.
+
+ ```javascript
+app.use( (req,res,next) => {
+   res.locals.isAuthenticated = req.session.isLoggedIn,
+   res.locals.csrfToken = req.csrfToken() 
+})
+ ```
+
+
+
+# Express Sending Emails
+
+we are going to use third party service to send emails.
+
+we are going to use sendGrid.
+
+```javascript
+sudo npm i --save nodemailer nodemailer-sendgrid-transport
+```
+
+```javascript
+const nodemailer = require('nodemailer');
+const sendgridTransport = require('nodemailer-sendgrid-transport');
+
+const transporter = nodemailer.createTransport(sendgridTransport({
+  auth : {
+    api_key : 'your-key'
+  }
+}));
+
+await transporter.sendMail({
+    to:email,
+    from: 'shop@node-complete.com',
+    subject: 'sign up succeeded',
+    html : "<h1> you successfully signed up! </h1>"
+})
+
+```
+
+
+
+when we want to scale we way not sending emails from here , 
+
+we'll use message queue or script that will run in schedule find new users send them email.
+
+
+
+# Validation
+
+validate that the data we work with is valid and in the format we want.
+
+for example validate email is valid.
+
+
+
+when we validate data on client side this is not secure because requests still can be sent to the server.
+
+we'll use express-validator
+
+```javascript
+npm i --save express-validator
+```
+
+we'll not validate in get but only in post/put.
+
+
+
+we'll going to validate sign up form.
+
+route : 
+
+```javascript
+const {check} = require('express-validator/check');
+router.post('/signup',check('email').isEmail(),authController.postSignup);
+```
+
+controller :
+
+```javascript
+const {validationResult} = require('express-validator/check')
+
+exports.postSignup = async(req,res,next) => {
+
+  const errors = validationResult(req);
+  if(!errors.isEmpty()){
+    return res.status(422).render('auth/signup',{
+      path: '/signup',
+      pageTitle: 'SignUp',
+      isAuthenticated: false,
+      errorMessage : errors.array()[0].msg
+    })
+  }
+
+  const email = req.body.email;
+  const password = req.body.password;
+  const confirmPassword = req.body.confirmPassword;
+  ...signupLogic
+}
+```
+
+create custom validator. 
+
+```javascript
+check('email')
+	.custom((value , {req})=>{
+    	return value=="aviad"
+})
+```
+
+
+
+to validate certain fields we can put any check as element in array
+
+[check(..),check(...)]
+
+
+
+# Error Handling
+
+error in js is an object.
+
+when error occurs we have diffrent ways to handle it :
+
+- if the code is syncornized put it in try catch and handle execption,
+- if code is async use then() catch() or try catch (with async await syntax)
+- use middleware to handle this excpetions 
+
+we can redirect user to error page , tell the user what was wrong in input 
+
+
+
+if you want to create middleware for error just add another argument 
+
+```javascript
+app.use((error,req,res,next)=> {
+    ....
+})
+```
+
+we can specify error middleware for specific path. 
+
+```javascript
+app.use('/path', (error,req,res,next)=> {
+    ....
+})
+```
+
+
+
+if error will occurd in sync code , this will go as default to error middleware.
+
+if error occur in async code , we have to ```next(err)```
+
+ 
+
+# Files
+
+we are going to focus on two things : 
+
+- upload file.
+- serve file from server.
+
+
+
+## Upload File
+
+to upload file we have to support it by our parser , till now our parser parse text , now we need to tell him parse files as well.
+
+also we need to change our form that to support upload files in their request 
+
+```html
+<form ... enctype="multipart/form-data" >
+  ...  
+</form>
+```
+
+```enctype="multipart/form-data"``` means form will contain text &  **files**
+
+
+
+body parser of files is multer
+
+```javascript
+npm i --save multer
+```
+
+
+
+multer as default handle the files as buffer and take metadata like : 
+
+```json
+{
+    fieldname : 'image',
+    originalname : 'boat.png',
+    encoding : '7bit',
+    mimtype : 'image/png',
+    buffer : <Buffer ...>,
+    size :5000
+}
+```
+
+
+
+we can configure multer save the image in specific place in file-system :
+
+```javascript
+app.use(multer({
+  dest : 'images', //save the image in this path 
+}).single('image'));
+```
+
+
+
+ we can filter the type of files we get by
+
+```javascript
+
+const fileStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'images');
+  },
+  filename: (req, file, cb) => {
+    cb(null, new Date().toISOString() + '-' + file.originalname);
+  }
+});
+const fileFilter = (req, file, cb) => {
+  if (
+    file.mimetype === 'image/png' ||
+    file.mimetype === 'image/jpg' ||
+    file.mimetype === 'image/jpeg'
+  ) {
+    cb(null, true);
+  } else {
+    cb(null, false);
+  }
+};
+
+
+app.use(
+  multer({ storage: fileStorage, fileFilter: fileFilter }).single('image')
+);
+
+```
+
+
+
+## Serve File
+
+we are going to treat the app as statefull therefore save the images on the project.
+
+make images to public.
+
+```javascript
+app.use(express.static('/images',path.join(__dirname, 'images')));
+```
+
+now we can access to this dir from anywhere.
+
+### Send files
+
+we can send to the client file , the client will download it.
+
+for example if we have pdf we can send it to client.
+
+
+
+```javascript
+exports.getPdfFIle = (req,res,next) => {
+    fs.readFile(path,(err,data)=>{
+        if(err){
+            return next(err);
+        }
+        res.setHeader('Content-Type','application/pdf');
+        res.send(data);
+    })
+}
+```
+
+
+
+**Don't use it on big files!**
+
+node will read entire file to the memory and then serve it.
+
+bigger files cause memory leaks and a lot of time waiting.
+
+in big file we'll steaming the data.
+
+
+
+```javascript
+const file = fs.createReadStream(path);
+res.setHeader('Content-Type','application/pdf');
+res.pipe(file)
+```
+
+
+
+## 	Create pdf 
+
+```javascript
+npm i --save pdfkit
+
+const PDFDocument = require('pdfkit');
+
+const pdfDoc = new PDFDocument();
+res.setHeader('Content-Type', 'application/pdf');
+res.setHeader(
+    'Content-Disposition',
+    'inline; filename="' + invoiceName + '"'
+);
+pdfDoc.pipe(fs.createWriteStream(invoicePath));
+pdfDoc.pipe(res);
+
+pdfDoc.fontSize(26).text('Invoice', {
+    underline: true
+});
+pdfDoc.text('-----------------------');
+let totalPrice = 0;
+order.products.forEach(prod => {
+    totalPrice += prod.quantity * prod.product.price;
+    pdfDoc
+        .fontSize(14)
+        .text(
+        prod.product.title +
+        ' - ' +
+        prod.quantity +
+        ' x ' +
+        '$' +
+        prod.product.price
+    );
+});
+pdfDoc.text('---');
+pdfDoc.fontSize(20).text('Total Price: $' + totalPrice);
+
+pdfDoc.end();
+```
+
+
+
+# Pagination
+
+split data across multiple pages instead of returning all the data.
+
+just use skip and limit to manipulate the data.
+
+from front end ask for pages , in backed do
+
+const limit = limitPerPage;
+
+const skip = (page-1) * limitPerPage;
+
+
+
+we can send csrf as header
+
+'csrf-token' : '...'
+
+csurf will check there automaticlly
+
+
+
+# Payments
+
+when we need to add functionality of payment to our service , we need to add : 
+
+- Collection Payment Method
+- Verify Payment Method
+- Charge Payment Method
+- Manage Payments
+- Do our logic
+
+usually all the 4 steps implemented by 3rd library.
+
+
+
+We are going to use Stripe as 3rd library
+
+How does it work ?
+
+Client will collect credit card data and send to stripe 
+
+stripe return token
+
+in our code we will create charge with help of stripe (we'll send token and charge)
+
+we'll get a response when this is charged.
+
+# REST API
+
+imagine that you have an some types of clients for your server.
+
+you have an android app , ios app , single page application (react) , and microservice that use it.
+
+if we will return only html as result this will be problemtic for our clients.
+
+
+
+Rest Api = Representational State Transfer
+
+we give who call the api only the data , usually as json and we give him the change to choose what to do and how to represent the data.
+
+
+
+api endpoint is combination of : 
+
+- http method
+
+- http path
+
+  for example : ```GET http://localhost/hello-world``` 
+
+HTTP METHODS :
+
+- Get - get a resource 
+- Post - Sends data to the server for creating a new entity. Often used when uploading a file or submitting a web form
+- Put - Similiar to POST, but used to replace an existing entity.
+- Patch - Similar to PUT, but used to update only certain fields within an existing entity
+- **DELETE**: Removes data from the server.
+- **TRACE**: Provides a way to test what server receives. It simply returns what was sent.
+
+
+
+Rest Principles :
+
+- Clearly defined api endpoints , the user know what he gives what he gets back, be clearly , documents what needed , good naming.
+
+- Stateless Interactions - server and client don't save any connection history , like isLoggedIn on the session , every request is handled separately.
+
+- Cachable - chancing headers , allow cache result and for how much time.
+
+  etc...
+
+201 success created.
+
+
+
+CORS : 
+
+OPTIONS : means which type of request you allow to your server , before fetch will happen , options request will be sent from the browser to check that this is valid.
+
+
+
+allow-some-websites access your server ```Access-Control-Allow-Origin : * ```
+
+allow some website access with content type ```Access-Control-Allow-Headers : Content-Type``` 
+
+
+
+allow all clients access to your api  :
+
+```javascript
+app.use((req,res,next)=>{
+    res.setHeader('Access-Control-Allow-Origin', '*')
+    res.setHeader('Access-Control-Allow-Methods', 'GET,POST')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+	next();
+})
+```
+
+
+
+
+
+Put and Patch speical because they have paramters and request body.
+
+
+
+## Authentication Rest Api
+
+client authenticate to server , server send token that called jwt (json web token).
+
+from there the client need to store the token and send it as additional data when 
+
+he want to fetch some data from the server.
+
+
+
+```javascript
+npm i --save jsonwebtoken
+```
+
+
+
+Login user and return json web token.
+
+```javascript
+const jwt = require('jsonwebtoken');
+
+exports.login = async (req,res,next) => {
+    try {
+        const email = req.body.email;
+        const password = req.body.password;
+        
+        const user = await User.findOne({email : email});
+        if(!user){
+            const error = new Error('User with this email not defiend.');
+            error.statusCode = 401;
+            throw error;
+        }
+
+        const isPasswordEquals = await bycrpt.compare(password,user.password);
+        if(!isPasswordEquals){
+            const error = new Error('Password not match.');
+            error.statusCode = 404;
+            throw error;
+        }
+
+        const token = jwt.sign({
+            email : user.email,
+            userId : user._id.toString() 
+        }, 'somesupersecretsecret',
+        {expiresIn : '1h'})
+
+        res.status(200).json({message : 'password match', jwt : token});
+
+    }catch(err){
+        next(err);
+    }
+}
+
+```
+
+
+
+Validating jwt : 
+
+usually in jwt we put the token in a header.
+
+Header :```Authorization : 'your token'```
+
+(you need to enable this header in cors)
+
+the convention is to put the word Barer before the jwt
+
+```json
+Authorization : Barer  eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImF2aWExMzIzMjJkQGdtYWlsLmNvbSIsInVzZXJJZCI6IjVlN2VhYjhhOTIwM2UwNjU2ZjhhMDBmOSIsImlhdCI6MTU4NTM2MTIxMywiZXhwIjoxNTg1MzY0ODEzfQ.dmYwH0QRdyy2XxVfBeg8UA9iDWXXq1NTUI81POeglyY
+```
+
+```javascript
+const jwt = require('jsonwebtoken');
+
+module.exports = (req,res,next) => {
+    const header = req.get('Authorization');
+    if(!header){
+        const err = new Error('Not authenitcated')
+        err.statusCode = 401;
+        throw err;    
+    }
+    const token = header.split(' ')[1];
+    let decodedToken;
+    try {
+        decodedToken = jwt.verify(token , 'somesupersecretsecret');
+    }catch(err){
+        err.statusCode = 500;
+        throw err;
+    }
+
+    if(!decodedToken){
+        const err = new Error('Not authenitcated')
+        err.statusCode = 401;
+        throw err;
+    }
+
+    req.userId = decodedToken.userId;
+    next();
+};
+```
 
