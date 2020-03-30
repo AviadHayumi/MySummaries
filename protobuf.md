@@ -263,8 +263,222 @@ Alternative to websocket
 - EventSource
 - Server Send Events
 
+
+
 # GRPC
 
 
 
+grpc was built by google in 2015.
+
+grpc using http2 and protocol buffer as message format.
+
+
+
+### Client Server Communication
+
+- Soap , Rest , GraphQL
+- WebSocket , SSE 
+- Raw TCP
+
+
+
+Request Response
+
+SOAP - client need sdk to access the server , schema was XML.
+
+Rest - Representational state transfer ,  transfer in most case data by JSON
+
+​			as JavaScript rise because usually serve JSON format.
+
+​			communicate via HTTP , don't need to worry about schema.
+
+GraphQL - Rest on steroids , give the client query language to API and then minimize number of request to 				server & gets only the data we interested in.
+
+
+
+Interactive Communication
+
+WebSocket - bi-directional communication between server and client. 
+						close tcp connection only when needed.
+
+SSE - server send events to client.
+
+
+
+Raw TCP - protocol upon TCP , define your own protocol.
+
+
+
+when writing server side in rest for example the client can be 
+
+- mobile/web app - client that fetch the data from api and give it to the user in this case the platform 							    is library of the api.
+
+  ​								notice that the browser is the biggest HTTP library client and he is responsible for 
+
+  ​								establish communication  with server , handle tls , make sure server support HTTP2 if 								not go to HTTP1 , handle stream , actually he is doing everything for you
+
+- another service that access your service - the service that consume the data is the library , everything is decouple if you specify that the client talks with the server with http1 and you want to change it to HTTP2 you need hard coded change it on the client library , hard to maintain , need always add feature to the client. 
+
+
+
+gRPC gives client libraries to all popular languages.
+
+using HTTP/2 as hidden implementation.
+
+Message Format - protocol buffers.
+
+
+
+when the world will be moved to HTTP3 you will just need to update client library for clients.
+
+when you receive the data as bytes you des it to your language model 
+
+
+
+gRPC Modes :
+
+- Unary RPC - Request Response.
+- Server Streaming RPC - client excepting a lot of data come from server , stream of data.
+- Client Streaming RPC - client stream data to the server.
+- Bidirectional streaming RPC - server communicate with client and vice versa.
+
+
+
+Coding Time
+
+
+
+first we create our protobuf
+
+```todo.proto```
+
+```protobuf
+syntax = "proto3"; //version of protobuf
+
+package todoPackage; //declare schema name
+
+service Todo {
+    rpc createTodo(TodoItem) returns ( TodoItem ); //specify method called createTodo
+    rpc readTodos(noValueItem) returns ( TodoItems ); //specify method called readTodo
+    rpc readTodosStream(noValueItem) returns ( stream TodoItem ); //stream the results
+}
+
+message noValueItem {}
+
+message TodoItem {
+    int32 id = 1; //first argument always be id
+    string text = 2; ////second argument always be text
+}
+
+message TodoItems {
+    repeated TodoItem items = 1; //repeated is equivalent to array
+}
+```
+
+
+
+```server.js```
+
+```javascript
+const grpc = require("grpc");
+const protoLoader = require("@grpc/proto-loader"); //import proto compiler
+
+const pacakgeDef = protoLoader.loadSync("todo.proto",{}); // load the proto file
+const grcpObject = grpc.loadPackageDefinition(pacakgeDef); 
+
+const todoPacakge = grcpObject.todoPackage; //get our todo schema
+
+const server = new grpc.Server(); 
+
+server.bind("0.0.0.0:40000",  grpc.ServerCredentials.createInsecure());
+
+server.addService(todoPacakge.Todo.service,
+                  {
+                    "createTodo" : createTodo, //specify method createTodo
+                    "readTodos" : readTodos, //specify method readTodos
+                    "readTodosStream" : readTodosStream //specify method readTodosStream
+                  });
+
+server.start();
+
+const todos = [];
+//call is the client
+//callback how do you react
+function createTodo(call,callback){
+    const todoItem = {
+        "id" : todos.length +1,
+        "text" : call.request.text
+    }
+    todos.push(todoItem);
+
+    callback(null,todoItem) //free the client , close tcp connection
+}
+
+function readTodos(call,callback){
+    callback(null,{"items": todos})
+}
+
+function readTodosStream(call,callback){
+    todos.forEach(t=>call.write(t)); //stream the data to client
+    call.end(); //close tcp connection
+}
+```
+
+```client.js```
+
+```javascript
+const grpc = require("grpc");
+const protoLoader = require("@grpc/proto-loader"); //impot proto compiler
+
+const pacakgeDef = protoLoader.loadSync("todo.proto",{}); // load the proto file
+const grcpObject = grpc.loadPackageDefinition(pacakgeDef); 
+
+const todoPacakge = grcpObject.todoPackage; //get our todo schema
+
+const client = new todoPacakge.Todo("localhost:40000",grpc.credentials.createInsecure()); 
+
+client.createTodo({
+    "id" : -1,
+    "text" : process.argv[2]
+}, (err,response)=>{
+    console.log(`Recived from server ${JSON.stringify(response)}`)
+});
+
+
+const call = client.readTodosStream();
+call.on("data" , item => {
+    console.log(`recived data as stream from server ${JSON.stringify(item)}`)
+})
+
+call.on("end" , item => {
+    console.log(`Finish Get Stream`)
+})
+```
+
+
+
+**Notice that the client can be written in each supported language , you just need to have the```todo.proto``` file**
+
  
+
+## Pros & Cons
+
+Pros :
+
+- fast because using HTTP2 and protobuf.
+- One client library , rest api required library to support this JavaScript (axios , fetch ,request);
+- cancel request because HTTP2
+- supproted to lot languge.
+
+Cons:
+
+- Schema , you force a schema.
+- Thick client -> you compile proto file each running.
+- proxies , not every proxy support this (layer 7).
+- young technology.
+- no native support for browser.
+- Unary RPC , simple request response timeout how much time do you have to wait ? (ms=micro service) ms1 call to ms2 to ms3 you have to manage chain of timeout , the soulution using pub/sub let your ms listen to the required data.
+
+
+

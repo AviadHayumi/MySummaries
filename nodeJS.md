@@ -289,26 +289,65 @@ const parsedBody = Buffer.contant(body).toString();
 
 
 ## NPM Scripts 
-node packge managment 
-npm init - this will not delete the code , asks questions about the  project ,this creata package.json file
-in json format.
-shorcuts to command :
-if you want to type npm someCommand and something will happen just open package.json
-and add to scripts , script name and command
-note that there is list of command that node support.
-if you want to name command that node doesnt support add r when you execute the command
-npm r my-command (node does not support command)
-npm start (node support command)
+NPM is a shortcut of **N**ode **P**ackage **M**anagement
 
-3rd libaries : how to add ? execute , npm install requiredPackageToDownload
-we have development libaries , libaries that we used only to develop not have to be in production and regular libaries
+```npm init``` - will create a package.json file that will containts :
+
+-  details on project , meta data.
+-  information running scripts. 
+-  required modules.
+
+This command asks questions about the  project ,this creata package.json file
+in json format.
+
+For skipping questions run ```npm init -y```
+
+shortcuts to command :
+if you want to type npm some-command and something will happen.
+
+1. just open package.json
+2. and add to scripts , script name and command
+   note that there is list of command that node support.
+3. if you want to name command that node does not support add run when you execute the command
+   ```npm run my-command```
+
+
+
+3rd libaries : how to add ? 
+
+execute ,``` npm install your-module```
+
+we have development libraries , libaries that we used only to develop not have to be in production and regular libaries
 npm install pacakge --save (as production) , npm install --save-dev (development) ,
 npm install -g (not in the project but in the machine that you would be able to reuse it in another projects)
 in pacakge json we have development dependencies
 
 npm install will install all the required depencdencie that have mentioned in packge.json
 
+```json
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "some description",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start" : "nodemon index.js"
+  },
+  "keywords": [],
+  "author": "Aviad",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1",
+  }
+}
+
+```
+
+
+
 ## Errors
+
 type of errors : 
 - syntax error - forget close braclet and errors like that (linter) 
 - runtime errors - not typo , code that breaks when runs (test/      debugger)
@@ -537,13 +576,13 @@ return db.execute('SELECT * FROM products')
 
 ```javascript
 exports.getProducts = (req, res, next) => {
-Product.fetchAll().then( ([products]) => {
-res.render('shop/product-list', {
-prods: products,
-pageTitle: 'All Products',
-path: '/products'
-});
-});
+	Product.fetchAll().then(([products]) => {
+		res.render('shop/product-list', {
+			prods: products,
+			pageTitle: 'All Products',
+			path: '/products'
+		});
+	});
 };
 ```
 
@@ -570,7 +609,7 @@ port: 3308
  ```
 2. then in app we are going to inital all the modles 
 (behind the scens what runs is sql query for create table if not exists for each model)
-for exmaple :
+for example :
 ```sql
 CREATE TABLE IF NOT EXISTS `products` (`id` INTEGER NOT NULL auto_increment ,
 `title` VARCHAR(255), `price` DOUBLE PRECISION NOT NULL, `imageUrl` VARCHAR(255) NOT NULL, 
@@ -579,6 +618,7 @@ CREATE TABLE IF NOT EXISTS `products` (`id` INTEGER NOT NULL auto_increment ,
 ```
 in this example if the db connection not succssed the server is not up.
 we inital after db sync has done.   
+
 ```javascript
 const port = 3000;
 sequlize.sync().then(result => {
@@ -600,20 +640,20 @@ const Sequelize = require('sequelize')
 const sequelize = require('../util/database')
 
 const Cars = sequelize.define('product', {
-id: {
-type: Sequelize.INTEGER,
-autoIncrement: true,
-allowNull: false,
-primaryKey: true
-},
-manufactringYear: {
-type: Sequelize.INTEGER,
-allowNull: false
-},
-model: {
-type: Sequelize.STRING,
-allowNull: false
-}
+    id: {
+        type: Sequelize.INTEGER,
+        autoIncrement: true,
+        allowNull: false,
+        primaryKey: true
+    },
+    manufactringYear: {
+        type: Sequelize.INTEGER,
+        allowNull: false
+    },
+    model: {
+        type: Sequelize.STRING,
+        allowNull: false
+    }
 });
 
 module.exports = Cars
@@ -621,10 +661,11 @@ module.exports = Cars
 
 who will need to use this model , will use functions of sequlize
 for example fetch all cars will be
+
 ```javascript
 Cars.findAll()
 ```
-behind the scens sequlize will run 
+behind the scenes sequlize will run 
 ```sql
 SELECT * FROM cars
 ```
@@ -660,8 +701,6 @@ when using nodejs and node , best practice is to create user in mongo with read&
 
 
 ```npm i --save mongodb``` 
-
-
 
 
 
@@ -1311,17 +1350,17 @@ to validate certain fields we can put any check as element in array
 
 error in js is an object.
 
-when error occurs we have diffrent ways to handle it :
+when error occurs we have different ways to handle it :
 
-- if the code is syncornized put it in try catch and handle execption,
+- if the code is synchronized put it in try catch and handle exception,
 - if code is async use then() catch() or try catch (with async await syntax)
-- use middleware to handle this excpetions 
+- use middle ware to handle this exceptions 
 
 we can redirect user to error page , tell the user what was wrong in input 
 
 
 
-if you want to create middleware for error just add another argument 
+if you want to create middle ware for error just add another argument 
 
 ```javascript
 app.use((error,req,res,next)=> {
@@ -1758,4 +1797,162 @@ module.exports = (req,res,next) => {
     next();
 };
 ```
+
+
+
+
+
+# Web Sockets
+
+
+
+Socket.io is built upon a websocket , and manage by engine.io things like keep alive , etc..
+
+Therefore we can't just connect from socket-io-client to regular websocket , and vice versa.
+
+to manage to who will message sent use namespaces.
+
+```javascript
+npm i --save socket.io
+```
+
+```app.js```
+
+```javascript
+
+(async ()=> {
+	const server = app.listen(8080);
+	const io = require('./socket.js')(server);
+    
+})()
+
+
+```
+
+```socket.js```
+
+```javascript
+let io;
+
+module.exports = {
+    init: httpServer => {
+        io = require('socket.io')(httpServer);
+        return io;
+    }
+    getIO : () => {
+        if(!io){
+            throw new Error('Socket.io not initlized');
+        }
+        return io;
+    }
+}
+```
+
+```feed.js```
+
+```javascript
+const io = require('../socket');
+
+exports.createPost = (req,res,next) => {
+    ...
+    //emit sends to all user
+    // brodacst send to all users except use doing operation
+    io.getIO().emit('posts' , {action : 'create', post:post})
+    ...
+}
+```
+
+
+
+client side
+
+```javascript
+npm i --save socket.io-client
+```
+
+```javascript
+const socket = openSocket('http://localhost:8080');
+
+socket.on('post', data => {
+    if(data.action == 'create') {
+        this.addPosts(data.post);
+    }
+})
+```
+
+
+
+# GraphQL
+
+**Rest On Steroids**
+
+
+
+## What is it GraphQL ? 
+
+Let's assume that
+
+```GET /POST``` 
+
+return
+
+```json
+{
+    id : '1',
+    title : 'First Post',
+    content : 'Great Book',
+    creator : 'Aviad'
+}
+```
+
+
+
+we if we only need the title ?
+
+in another request we need title and content.
+
+1. create end-point to each require is difficult to maintain.
+
+2. we can use query params but the api will be hard to understand.
+
+3. use GraphQL , the client query whatever he wants.
+
+
+
+in GraphQL we only send ```POST``` request that contains in the body the data that should be returend.
+
+for example :
+
+``` POST /POST```
+
+```json
+{
+    query { // Operation type 
+    	user {
+    		name
+    		age
+		}
+	}
+}
+```
+
+
+
+we 3 Operation types :
+
+- query - get data from server , filter whatever you want
+
+   equivalent to ```GET```
+
+- mutation - editing , deleting , inserting , subscriptions data.
+   equivalent to ```POST , PUT , PATCH , DELETE```
+- subscription - subscribe data to get real time data.
+
+
+
+type definition will be equivalent to routes
+
+resolver equivalent controller.
+
+
 
