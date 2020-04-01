@@ -1247,3 +1247,1287 @@ Docker has two solution for this issue :
 
 ### Volumes
 
+ok so if we get in `mysql` Dockerfile we can notice that we have an layer the contains command
+
+```dockerfile
+VOLUME /var/lib/mysql
+```
+
+
+
+so what is it means ?
+
+let's install `mysql`
+
+```bash
+docker run -d --name mysql -e MYSQL_ALLOW_EMPTY_PASSWORD=True mysql
+```
+
+then let's inspect
+
+```bash
+docker container inspect mysql    
+```
+
+```json
+//we can notice two fields 
+  "Mounts": [
+            {
+                "Type": "volume",
+                "Name": "33d7a1afb3fa93b551a8309d6659f77a2f3290d5a4a2e416639be9fd007f34a3",
+                "Source": "/var/lib/docker/volumes/33d7a1afb3fa93b551a8309d6659f77a2f3290d5a4a2e416639be9fd007f34a3/_data",
+                "Destination": "/var/lib/mysql",
+                "Driver": "local",
+                "Mode": "",
+                "RW": true,
+                "Propagation": ""
+            }
+  ]
+        
+"Volumes": {
+    "/var/lib/mysql": {}
+}
+```
+
+the container is giving special space on the host to save his data 
+
+in this case ```Mounts.0.Source``` represent the place on the host that the data is being saved.
+
+```Mounts.0.Destination``` is the place of the data in the container.
+
+if we are doing 
+
+```bash
+docker volume inspect 33d7a1afb3fa93b551a8309d6659f77a2f3290d5a4a2e416639be9fd007f34a3
+```
+
+we can get data on the specific volume
+
+```json
+[
+    {
+        "CreatedAt": "2020-03-30T21:54:51+03:00",
+        "Driver": "local",
+        "Labels": null,
+        "Mountpoint": "/var/lib/docker/volumes/33d7a1afb3fa93b551a8309d6659f77a2f3290d5a4a2e416639be9fd007f34a3/_data",
+        "Name": "33d7a1afb3fa93b551a8309d6659f77a2f3290d5a4a2e416639be9fd007f34a3",
+        "Options": null,
+        "Scope": "local"
+    }
+]
+```
+
+in Linux machine you can navigate to the host path.
+
+if we delete container the volume still exists.
+
+volume need manual deletion 
+
+```bas
+docker run -d --name mysql -e MYSQL_ALLOW_EMPTY_PASSWORD=True -v mysql-db:/var/lib/mysql mysql
+```
+
+notice ``` -v <-volume-firendly-name->:<path-in-host-machine>```
+
+this will create it in ```/var/lib/docker/volumes/mysql-db/_data```
+
+the defaults is in ```/var/lib/docker/volumes/volume-name/_data```
+
+to make it more friendly we can name volume.
+
+
+
+## BInd Mounting
+
+you cant specify mounting in docker file but you only can specify them while creating docker from cli.
+
+Maps a host file or directory to a container file or directory 
+
+Basically just two locations pointing to the same file
+
+this skip UFS and host files overwrite any in container.
+
+
+
+what we will do is to overwrite nginx html page.
+
+```bash
+docker run -d --name nginx -p 80:80 -v $(pwd):/usr/share/nginx/html nginx
+```
+
+in /use/share/nginx/html nginx hold the html file to present what we did is to change this dir to our host dir that contains diffrent html file.
+
+now diffrent html page will be present.
+
+```html
+curl localhost:80
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>HEll YEAAA!</title>
+</head>
+<body>
+  <h1>This is me overwrite nginx html :) !</h1>
+</body>
+</html>
+```
+
+
+
+### Volume Attachment
+
+we are going to update database and let the data being exists.
+
+1. Create postgres container with voulme psql-data using version 9.6.1.
+2. use docker hub to learn VOLUME path versions needed to run it.
+3. check logs , stop container, check if docker vulme ls contains your volume.
+4. Create a new postgres container with same named voulme using 9.6.2
+
+```bash
+docker run -d --name my-postgres -e POSTGRES_PASSWORD=mysecretpassword -e POSTGRES_USER=aviad -v my-lovely-posgress-vol:var/lib/postgresql/data postgres:9.6.1
+
+docker volume ls 
+
+DRIVER              VOLUME NAME
+local               my-lovely-posgress-vol
+
+docker run -d --name my-postgres -e POSTGRES_PASSWORD=mysecretpassword -e POSTGRES_USER=aviad -v my-lovely-posgress-vol:/var/lib/postgresql/data postgres:9.6.2
+
+docker stop my-postgres
+
+#by doing this check
+docker inspect my-postgres
+docker inspect my-postgres1
+
+#check in mount field there are reffer to same volume
+```
+
+
+
+
+
+```
+POSTGRES_HOST_AUTH_METHOD=trust
+POSTGRES_PASSWORD=mypasswd
+```
+
+
+
+# Docker Compose
+
+When we think about container it just a single process solution.
+
+what happens if need couple of containers to get to our solution ?
+
+Docker Compose allow us 
+
+- configure relationships between containers.
+- make our docker settings file easy to read.
+- create one place for environment setup for the developer.
+
+
+
+we have 2 parts of docker-compose :
+
+- yaml file , how to setup our containers.
+- cli named ```docker-compose``` to manage this file.
+
+```docker-compose.yml```
+
+```yaml
+version: '3.1'  # if no version is specificed then v1 is assumed. Recommend v2 minimum
+
+services:  # containers. same as docker run
+  servicename: # a friendly name. this is also DNS name inside network
+    image: # Optional if you use build:
+    command: # Optional, replace the default CMD specified by the image
+    environment: # Optional, same as -e in docker run
+    volumes: # Optional, same as -v in docker run
+  servicename2:
+
+volumes: # Optional, same as docker volume create
+
+networks: # Optional, same as docker network create
+```
+
+
+
+example 1 :
+
+```yaml
+version: '2'
+
+# same as 
+# docker run -p 80:4000 -v $(pwd):/site bretfisher/jekyll-serve
+
+services:
+  jekyll:
+    image: bretfisher/jekyll-serve
+    volumes:
+      - .:/site
+    ports:
+      - '80:4000'
+```
+
+
+
+example 2 :
+
+```yaml
+version: '2'
+
+services:
+
+  wordpress:
+    image: wordpress
+    ports:
+      - 8080:80
+    environment:
+      WORDPRESS_DB_HOST: mysql
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_USER: example
+      WORDPRESS_DB_PASSWORD: examplePW
+    volumes:
+      - ./wordpress-data:/var/www/html
+
+  mysql:
+    image: mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: examplerootPW
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: example
+      MYSQL_PASSWORD: examplePW
+    volumes:
+      - mysql-data:/var/lib/mysql
+
+volumes:
+  mysql-data:
+```
+
+**version 2 notice that ``environment`` is a key value , ```ports & volumes``` are list**
+
+
+
+example 3 :
+
+```yaml
+version: '3'
+
+services:
+  ghost:
+    image: ghost
+    ports:
+      - "80:2368"
+    environment:
+      - URL=http://localhost
+      - NODE_ENV=production
+      - MYSQL_HOST=mysql-primary
+      - MYSQL_PASSWORD=mypass
+      - MYSQL_DATABASE=ghost
+    volumes:
+      - ./config.js:/var/lib/ghost/config.js
+    depends_on:
+      - mysql-primary
+      - mysql-secondary
+  proxysql:
+    image: percona/proxysql
+    environment: 
+      - CLUSTER_NAME=mycluster
+      - CLUSTER_JOIN=mysql-primary,mysql-secondary
+      - MYSQL_ROOT_PASSWORD=mypass
+   
+      - MYSQL_PROXY_USER=proxyuser
+      - MYSQL_PROXY_PASSWORD=s3cret
+  mysql-primary:
+    image: percona/percona-xtradb-cluster:5.7
+    environment: 
+      - CLUSTER_NAME=mycluster
+      - MYSQL_ROOT_PASSWORD=mypass
+      - MYSQL_DATABASE=ghost
+      - MYSQL_PROXY_USER=proxyuser
+      - MYSQL_PROXY_PASSWORD=s3cret
+  mysql-secondary:
+    image: percona/percona-xtradb-cluster:5.7
+    environment: 
+      - CLUSTER_NAME=mycluster
+      - MYSQL_ROOT_PASSWORD=mypass
+   
+      - CLUSTER_JOIN=mysql-primary
+      - MYSQL_PROXY_USER=proxyuser
+      - MYSQL_PROXY_PASSWORD=s3cret
+    depends_on:
+      - mysql-primary
+```
+
+**version 3 ```enivorment&ports&volumes``` are lists. ** 
+
+depends_on specify that we are depending on another service.
+
+
+
+if we don't specify volumes or networks
+
+## Docker Compose cli
+
+```bash
+docker-compose up #setup all volumes,networks,start all containers
+docker-compose down # remove volumes,networks and stop all containers
+docker-compose -d up #start with detach mode
+docker-compose logs # see logs of containers
+docker-compose top # list all containers processes
+docker-compose --help # get all info about commands
+```
+
+in the background docker-compose talking to docker API.
+
+
+
+### Assignment 
+
+create docker-compose.yml from scratch 
+
+- use drupal image expose on port 8080 so you can call localhost:8080
+- use POSTGRES_PASSWORD for postgres
+- docker-compose up 
+- give the drupal postgres service name
+
+```yaml
+version: '3'
+
+services:
+  drupal:
+    image: drupal
+    ports:
+      - "8080:80"
+  postgres:
+    image: postgres
+    ports:
+     - "5432:5432"
+    environment: 
+      - POSTGRES_PASSWORD=pass
+```
+
+
+
+## Build image in compose file
+
+```yaml
+version : '2'
+
+services:
+	proxy:
+		build:
+			context: . #path of image Dockerfile
+			dockerfile: nginx.Dockerfile #name of Dockerfile file
+		image: nginx-custom #how do we call the image
+		ports:
+		  - '80:80'
+	web:
+		image: httpd
+		volumes: 
+		  - ./html:/user/local/apache2/htdocs
+```
+
+when we will execute this 
+
+first docker-compose check for the image `nginx-custom` in the cache , if not find it then create it.
+
+
+
+docker compose name the networks , volumes , build images (if name not specify) with the name of directory project name.
+
+
+
+```Dockerfile```
+
+```dockerfile
+FROM drupal:8.8.2
+RUN apt-get update && apt-get install -y git
+RUN rm -rf /var/lib/apt/lists/*
+WORKDIR /var/www/html/themes
+RUN git clone --branch 8.x-3.x --single-branch --depth 1 https://git.drupal.org/project/bootstrap.git
+RUN chown -R www-data:www-data bootstrap
+WORKDIR /var/www/html
+```
+
+```docker-compose.yml```
+
+```yaml
+version: '2'
+
+services:
+  drupal:
+    build:
+      context: .
+      dockerfile : Dockerfile
+    image: custom-drupal
+    ports:
+      - "8080:80"
+    volumes:
+      - drupal-modules:/var/www/html/modules
+      - drupal-profiles:/var/www/html/profiles       
+      - drupal-sites:/var/www/html/sites      
+      - drupal-themes:/var/www/html/themes
+  postgres:
+    image: postgres:12.1
+    environment:
+      - POSTGRES_PASSWORD=mypasswd
+
+volumes:
+  drupal-modules:
+  drupal-profiles:
+  drupal-sites:
+  drupal-themes:
+```
+
+
+
+# Docker Swarm
+
+When we want to scale and we put a lot of containers in same/different servers how would us maintain this?
+
+- How do we automate container life cycle ?
+- How can we easily scale out/in/up/down ? 
+- How we ensure containers are re-created if they fail ?
+- How can we replace containers without downtime ?
+- How do we track out containers ?
+- How can we create cross-node virtual networks ?
+- How can we ensure only trusted servers runs our container ?
+- How can we store secrets,keys,passwords and get them to the container ?
+
+
+
+Swarm is a cluster of machines that runs docker ,scalable ,reliable platform running many containers.
+
+
+
+Swarm is a clustering solution of write one file management and let it spread to number of servers.
+
+We can orchestrate the life cycle of the containers.
+
+Since 2017 swarm is built in Docker Eco-system.
+
+to use swarm we need to enable it.
+
+
+
+how to check if swarm is enable ?
+
+```bash
+docker info
+
+# check that 
+# Swarm: active   ==== V
+# Swarm: inactive ==== X
+```
+
+to activate in case of incative
+
+```bash
+docker swarm init
+```
+
+
+
+see all nodes
+
+```bash
+aviad@aviad-Inspiron-7373:~$ docker node ls
+ID                            HOSTNAME              STATUS              AVAILABILITY        MANAGER STATUS      ENGINE VERSION
+lu1zvijkco9yqf88w2noxv6u7 *   aviad-Inspiron-7373   Ready               Active              Leader              19.03.6
+```
+
+
+
+let's create a service that ping to google
+
+```bash
+docker service create alpine ping 8.8.8.8
+```
+
+now let's check if was created
+
+```bash
+aviad@aviad-Inspiron-7373:~$ docker service ls
+ID                  NAME                MODE                REPLICAS            IMAGE               PORTS
+mmq81s8hkwvz        jolly_keldysh       replicated          1/1                 alpine:latest       
+
+#we also can see that container have been created
+
+aviad@aviad-Inspiron-7373:~$ docker ps
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+fe87bad85b5a        alpine:latest       "ping 8.8.8.8"      39 seconds ago      Up 38 seconds                           jolly_keldysh.1.f4wsy4awikm3n3fn3z9q88ctr
+```
+
+notice that the service generate name and put the name in container with some extra names.
+
+```bash
+aviad@aviad-Inspiron-7373:~$ docker service  update mmq81s8hkwvz --replicas 3
+mmq81s8hkwvz
+overall progress: 3 out of 3 tasks 
+1/3: running   [==================================================>] 
+2/3: running   [==================================================>] 
+3/3: running   [==================================================>] 
+verify: Service converged 
+
+
+# we can see that we have in replica 3/3 , now if we'll put one of the containers down it automaticlly put new container up.
+
+aviad@aviad-Inspiron-7373:~$ docker service ls
+ID                  NAME                MODE                REPLICAS            IMAGE               PORTS
+mmq81s8hkwvz        jolly_keldysh       replicated          3/3                 alpine:latest       
+
+```
+
+
+
+docker service replace docker run command is swarm world, it allows us extra features likes replica 
+
+
+
+## Create Swarm Cluster
+
+get in to this website
+
+ https://labs.play-with-docker.com/p/bq1u97joudsg008cnli0#bq1u97jo_bq1uai5im9m0009ed670
+
+this if free don't worry, and create 3 instances
+
+
+
+so we need to run this command
+
+```bash
+docker swarm init --advertise-addr ip-adress
+
+$ docker swarm init --advertise-addr 192.168.0.48
+
+as a respone we got this
+# docker swarm join --token SWMTKN-1-0532yrzs20ryj51i8ibacn13ijv7vzfgk01at5eldrs8zon1ag-epo0dwpzir7i44l8rsuguao27 192.168.0.48:2377 
+```
+
+now we'll go to our another servers and run the response command that we've got.
+
+
+
+only managers run swarm commands , you can promote worker to manager so don't worry .
+
+```bash
+docker node update --role manager <hostname>
+```
+
+if we want to add node as default as manager
+
+```bash
+docker swarm join manager--token SWMTKN-1-0532yrzs20ryj51i8ibacn13ijv7vzfgk01at5eldrs8zon1ag-epo0dwpzir7i44l8rsuguao27 192.168.0.48:2377 
+```
+
+
+
+### Swarm networking
+
+To create swarm wide bridge network where containers host on the same virtual network can like accesses each other like they are in a vlan.
+
+```bash
+docker network create --driver overlay your-network-name
+```
+
+
+
+let's use what we were doing in drupal and postgres in docker swarm.
+
+```bash
+# let's create a network
+docker network create --driver overlay mydrupal
+
+# let's create service named psql of postgres
+[node1] (local) root@192.168.0.13 ~
+$ docker service create --name psql --network mydrupal -e POSTGRES_PASSWORD=mypass postgres
+4vwbqh1n85sh319wufrzqgkvp
+overall progress: 1 out of 1 tasks 
+1/1: running   [==================================================>] 
+verify: Service converged 
+
+[node1] (local) root@192.168.0.13 ~
+$ docker service ls
+ID                  NAME                MODE                REPLICAS            IMAGE               PORTS
+4vwbqh1n85sh        psql                replicated          1/1                 postgres:latest     
+
+# let's see where the container was created
+[node1] (local) root@192.168.0.13 ~
+$ docker service  ps psql 
+ID                  NAME                IMAGE               NODE                DESIRED STATE       CURRENT STATE           ERROR               PORTS
+fspitp9lvdcu        psql.1              postgres:latest     node1               Running             Running 3 minutes ago                       
+
+#ahaha! in node1
+
+# lets create drupal
+[node1] (local) root@192.168.0.13 ~
+$ docker service create --name drupal --network mydrupal -p 80:80 drupal
+0pfxf3sysn1tlbx0dz5qky8ek
+overall progress: 1 out of 1 tasks 
+1/1: running   
+
+# let's check where drupal was created
+[node1] (local) root@192.168.0.13 ~
+$ docker service ps drupal 
+ID                  NAME                IMAGE               NODE                DESIRED STATE       CURRENT STATE            ERROR               PORTS
+[node1] (local) root@192.168.0.13 ~
+$ docker service ps drupal 
+ID                  NAME                IMAGE               NODE                DESIRED STATE       CURRENT STATE            ERROR               PORTS
+65vslw6j13sb        drupal.1            drupal:latest       node3               Running             Running 50 seconds ago                       
+# ahaha! in node3
+
+```
+
+now we can notice that if you'll try to get 
+
+node1:80 , node2:80 , node3:80 , we'll get same site although the container is running on node3.
+
+swarm doing the load balancing automatically.
+
+you don't have to worry where is container exists.
+
+
+
+###	Attatchment
+
+# Assignment: Create A Multi-Service Multi-Node Web App
+
+## Goal: create networks, volumes, and services for a web-based "cats vs. dogs" voting app.
+Here is a basic diagram of how the 5 services will work:
+
+![diagram](./architecture.png)
+- All images are on Docker Hub, so you should use editor to craft your commands locally, then paste them into swarm shell (at least that's how I'd do it)
+- a `backend` and `frontend` overlay network are needed. Nothing different about them other then that backend will help protect database from the voting web app. (similar to how a VLAN setup might be in traditional architecture)
+- The database server should use a named volume for preserving data. Use the new `--mount` format to do this: `--mount type=volume,source=db-data,target=/var/lib/postgresql/data`
+
+### Services (names below should be service names)
+- vote
+    - **bretfisher/examplevotingapp_vote**
+    - web front end for users to vote dog/cat
+    - ideally published on **TCP 80**. **Container listens on 80**
+    - **on frontend network**
+    - **2+ replicas** of this container
+
+- redis
+    - **redis:3.2**
+    - key/value storage for incoming votes
+    - no public ports
+    - **on frontend network**
+    - **1 replica** 
+
+- worker
+    - bretfisher/examplevotingapp_worker:java
+    - backend processor of redis and storing results in postgres
+    - no public ports
+    - **on frontend and backend networks**
+    - **1 replica**
+
+- db
+    - **postgres:9.4**
+    - one named volume needed, pointing to **/var/lib/postgresql/data**
+    - **on backend network**
+    - **1 replica**
+    - remember set env for password-less connections **-e POSTGRES_HOST_AUTH_METHOD=trust**
+
+- result
+    - bretfisher/examplevotingapp_result
+    - web app that shows results
+    - runs on high port since just for admins (lets imagine)
+    - so run on a high port of your choosing (I choose **PORT 5001**), container listens on 80
+    - **on backend network**
+    - **1 replica**
+
+
+
+## Result
+
+```bash
+# create networks
+docker network create --driver overlay backend
+docker network create --driver overlay frontend
+
+docker service create --name vote-app --network frontend  --replicas 3-p  80:80 bretfisher/examplevotingapp_vote
+
+docker service create --name reddis --network frontend  --replicas 1 redis:3.2
+
+# this has to be connected to 2 networks
+docker service create --name woker --network frontend --network backend --replicas 1  bretfisher/examplevotingapp_worker:java
+
+docker service create --name db --network backend -e POSTGRES_HOST_AUTH_METHOD=trust 
+--replicas 1 --mount type=volume,source=db-data,target=/var/lib/postgresql/data postgres:9.4
+
+docker service create --name result --network backend -p 5001:80 --replicas 1 bretfisher/examplevotingapp_result
+
+```
+
+
+
+## Swarm Stacks
+
+Stacks is the docker compose of docker services.
+
+instead of writing command after command of create/running service , everything exists in one file , when we deploy it this run all services.
+
+
+
+you don't have built in docker swarm file , only deploy.
+
+when you run this file in your local machine this will ignore the deploy part.
+
+when on swarm this will ignore build.
+
+
+
+```voiting.yml```
+
+```yml
+version: "3"  # this have to be up to version 3
+services:
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379"
+    networks:
+      - frontend
+    deploy:
+      replicas: 1
+      update_config: # when i update what do i want to happen
+        parallelism: 2 # only two conccurent can be updated
+        delay: 10s
+      restart_policy:
+        condition: on-failure # restart when fail 
+  db:
+    image: postgres:9.4
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - backend
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    deploy:
+      placement:
+        constraints: [node.role == manager] # condition of where to deploy
+  vote:
+    image: bretfisher/examplevotingapp_vote
+    ports:
+      - 5000:80
+    networks:
+      - frontend
+    depends_on:
+      - redis
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 2
+      restart_policy:
+        condition: on-failure
+  result:
+    image: bretfisher/examplevotingapp_result
+    ports:
+      - 5001:80
+    networks:
+      - backend
+    depends_on:
+      - db
+    deploy:
+      replicas: 1
+      update_config:
+        parallelism: 2
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+
+  worker:
+    image: bretfisher/examplevotingapp_worker:java
+    networks:
+      - frontend
+      - backend
+    depends_on:
+      - db
+      - redis
+    deploy:
+      mode: replicated
+      replicas: 1
+      labels: [APP=VOTING]
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 3
+        window: 120s
+      placement:
+        constraints: [node.role == manager]
+
+  visualizer:
+    image: dockersamples/visualizer
+    ports:
+      - "8080:8080"
+    stop_grace_period: 1m30s
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+networks:
+  frontend:
+  backend:
+
+volumes:
+  db-data:
+```
+
+
+
+to lunch it 
+
+```bash
+docker stack deploy -c voiting.yml voteapp
+```
+
+
+
+```bash
+[node1] (local) root@192.168.0.7 ~
+$ docker stack deploy -c example-voiting-app-stack.yml voteapp
+Creating network voteapp_default
+Creating network voteapp_frontend
+Creating network voteapp_backend
+Creating service voteapp_visualizer
+Creating service voteapp_redis
+Creating service voteapp_db
+Creating service voteapp_vote
+Creating service voteapp_result
+
+```
+
+see all stacks
+
+```bash
+$ docker stack ls
+NAME                SERVICES            ORCHESTRATOR
+voteapp             6                   Swarm
+```
+
+see replica and all services
+
+```bash
+[node1] (local) root@192.168.0.7 ~
+$ docker stack ps voteapp 
+ID                  NAME                   IMAGE                                       NODE                DESIRED STATE       CURRENT STATE            ERROR                  
+     PORTS
+g99slb8v7at1        voteapp_worker.1       bretfisher/examplevotingapp_worker:java     node1               Running             Running 8 minutes ago                           
+     
+l6ol7hojrjwf         \_ voteapp_worker.1   bretfisher/examplevotingapp_worker:java     node1               Shutdown            Failed 8 minutes ago     "task: non-zero exit (1
+)"   
+yvpg8e62svlb        voteapp_result.1       bretfisher/examplevotingapp_result:latest   node2               Running             Running 36 minutes ago                          
+     
+gjtf2weaudb1        voteapp_vote.1         bretfisher/examplevotingapp_vote:latest     node2               Running             Running 36 minutes ago                          
+     
+u3hyishevl82        voteapp_db.1           postgres:9.4                                node1               Running             Running 36 minutes ago                          
+     
+u4fldt9iid9u        voteapp_redis.1        redis:alpine                                node3               Running             Running 36 minutes ago                          
+     
+3q7twpuk1dw6        voteapp_visualizer.1   dockersamples/visualizer:latest             node1               Running             Running 35 minutes ago                          
+```
+
+
+
+we have in port 8080 all the nodes with services.
+
+
+
+when we want to update we just need to run the deploy command , this will deploy only the changes.
+
+
+
+
+
+### Swarm Secrets
+
+secrets is all the data that you want to hide and protect like username,password,twitter api key ,ssh key , etc..
+
+
+
+Swarm raft db is encrypted on your disk as default (when you do docker swarm init).
+
+manager talks to worker through tls layer 
+
+only containers assign to swarm can see them.
+
+Secrets depend on swarm , we can either use secrets on our machine with docker compose but this is not secure.
+
+
+
+we can create secrets in 2 ways : 
+
+- create a file and give it to swarm.
+- pass key value through cli.
+
+
+
+```bash
+$ echo aviad >> psql_user.txt
+
+[node1] (local) root@192.168.0.7 ~
+$ docker secret create psql_user psql_user.txt 
+
+#output
+z3irhefm7drmxf74gucf56vwh
+```
+
+
+
+```bash
+[node1] (local) root@192.168.0.7 ~
+$ echo "myDBPassword" | docker secret create psql_pass -
+wq6ysl4umjybk78hatfyt76w6
+```
+
+
+
+two ways insecure 
+
+in the first user just can access the file and see the content
+
+the second option , if somone does histroy he can see this passord.
+
+
+
+see existing secrects 
+
+```bash
+[node1] (local) root@192.168.0.7 ~
+$ docker secret ls
+ID                          NAME                DRIVER              CREATED             UPDATED
+wq6ysl4umjybk78hatfyt76w6   psql_pass                               3 minutes ago       3 minutes ago
+z3irhefm7drmxf74gucf56vwh   psql_user                               4 minutes ago       4 minutes ago
+```
+
+
+
+this is stored now in raft db , we can use inspect to see info like created , modifie 
+
+
+
+secrets is being saved on /run/secrets/<encrypted-hash-secert>
+
+
+
+so when we'll want to access the value from docker-compose
+
+we should check if our image support take value from file
+
+```    yaml
+ POSTGRES_PASSWORD_FILE=/run/secrets/psql_password
+```
+
+ if image not support we need to take value from there in another way.
+
+
+
+secrets and stacks
+
+version has to be up to 3.1
+
+```yaml
+secrets:
+  psql_user:
+  	file: ./myuserfile.txt
+  psql_password:
+  	file: ./mypasswordfile.txt
+```
+
+we can either create the secret before and pass his encrypted value.
+
+
+
+## Swarm Updates
+
+if you want to update swarm in run time
+
+
+
+update image
+
+```bash
+docker service update --image myapp:1.2.1 service_name
+```
+
+add env
+
+```sbash
+docker service update 	--env-add KEY=value service_name
+```
+
+remove port
+
+```sbash
+docker service update 	--publish-rm port service_name
+```
+
+change scale	
+
+```sbash
+docker service scale servicename=numbers
+```
+
+
+
+## HelthChecks
+
+ Supported from :
+
+- Dockerfile
+- Compose YAML
+- Docker run
+- Swarm Services
+
+this is simple command that has to bee running and return exit code of 0 or 1
+
+0 - good thing
+
+1 - error 
+
+
+
+we have three states for container :
+
+- starting
+- healthy
+- unhelathy
+
+thins will be running every 30 seconds
+
+
+
+docker container ls - we'll be able to check health of container.
+
+docker container inspect - will hold 5 last health check result.
+
+
+
+docker run will not handle unhealth container but docker swarm will
+
+service will be replace task in case of fail health check.
+
+```bash
+docker run \
+	--health-cmd = "curl -f localhost:9200/_cluster/health || false" \
+	--health-interval = 5s \
+	--health-retreis  = 3 \
+	--health-timout   = 2s \
+	--health-start-period = 15s \ 
+  elasticsearch:2
+```
+
+
+
+interval - how often check will be made (default 30sec)
+
+timeout - how long is going to wait before it errors out (default 30sec)
+
+start-period - start time that check not relevant (default 0 ) usually for long build.
+
+retries - try x time before deciding unhealthy
+
+cmd - command the will be run to check (default ```curl -f http://localhost/ || false```)  **?**
+
+​	
+
+```yaml
+version : "2.1" # minimum for health check
+services : 
+  web : 
+    image : nginx
+    healthcheck:
+      test: ["CMD","curl","-f","http://localhost"]
+      interval : 1m30s
+      timeout : 10s
+      retries : 3
+      start_period : 1m # only supproted in 3.4 version
+```
+
+
+
+# Docker Registry
+
+we can in DockerHub make image private.
+
+you can use web-hook to let automation tool builds.
+
+in collaborations we can put permissions for users to accesses our image.
+
+you also have organization.
+
+if you are using github or bitbucket you can create automatic build from docker hub, this will create ci based on your code commits.
+
+each time you commit this is built in github.
+
+you can base your image on another image (from) when the base image will be change this will change your image.
+
+
+
+
+
+## Private Registry
+
+we are going to create private registry 
+
+notice that docker talk only with http**s** so what we are going to do is put registry on our local machine without tls layer this is only works on localhost.
+
+```bash
+docker run -d -p 5000:5000 --name registry registry
+
+docker pull hello-world
+
+docker tag hello-world 127.0.0.1:5000/hello-world
+docker push 127.0.0.1:5000/hello-world # will push to local registry 
+```
+
+
+
+this is not common not use volume in this case , there are serval options :
+
+- using volume
+- s3
+- etc..
+
+```bash
+docker run -d -p 5000:5000 --name registry -v $(pwd)/registry-data:/var/lib/registry registry
+
+```
+
+
+
+# Docker con 17
+
+env top
+
+logs stdin/stdout togther  , volume to one place.
+
+dont save information inside container use volume.
+
+use specific version in FROM
+
+leave defaults config 
+
+
+
+reason to run couple swarm
+
+geographic boundaries 
+
+bad reasons
+
+diffrent subnets secutriy groups 
+
+diffrent aviliablity 
+
+
+
+
+
+# Kubernetes
+
+Kubernetes = popular container orchestrator.
+
+Container Orchestration = Make many servers act like one.
+
+
+
+devolved by Google now is open source.
+
+it's runs on docker,
+
+gives you api/cli to manage containers across servers.
+
+
+
+kube control 
+
+
+
+top popular way to use kube is through cloud vendor , that provide kube as a service.
+
+many vendor make kube custom we'll call it distro of it.
+
+like linux when we have kernel and many distro , we have the fundcamitional of linux and then each distro add his unique
+
+
+
+we have it as well in kube when we have many "distro" for : cloud , on-prem,dc ,etc...
+
+
+
+Servers + Chnage rate = Benefit of orchestration
+
+kube is hybrid you can , run it on diffrent places
+
+kube disto : 
+
+- cloud
+- self managment
+  - Docker Enterprise
+  - Rancher
+  - OpenShift
+  - Canocial
+  - VMWare
+  - PKS
+
+
+
+## kube vs swarm :
+
+they both built upon docker run time
+
+swarm is easier to deploy manage
+
+kube more features and flexbility
+
+
+
+swarm advantage 
+
+docker cli
+
+come from docker company
+
+easier to deploy/manage yourself
+
+has 20% of features of kube but solve 80% of use case
+
+run when docker can be run (windows , arm - embdded , dc , 32-bit)
+
+secure by default 
+
+
+
+kube :
+
+clouds will deploy manage for you
+
+wide adpotion and community 
+
+cover wide sets of use cases 
+
+this is more safe to your career
+
+
+
+
+
+kubectl = kube control = k8s cli
+
+single server in k8s called node
+
+kubelet - k8s agent running on nodes
+
+Control plane / master = is the chrage of running k8s cluster 
+
+(in swarm we have manager)
+
