@@ -2,6 +2,10 @@
 
 We have two types of docker paid (ee) or free (ce).
 
+> insert details about docker and how works internally 
+
+
+
 
 
 ## Install docker on linux
@@ -19,10 +23,6 @@ curl -sSL https://get.docer.com/ | sh
 ```
 
 ----
-
-
-
-
 
 
 
@@ -104,6 +104,8 @@ Run 'docker COMMAND --help' for more information on a command.
 
 
 
+shortcut for docker container
+
 ```bash
 #this command
 docker container <container-command>
@@ -117,7 +119,7 @@ docker <container-command>
 #verify cli can talk to engine
 docker version
 
-#most valuable config for engine
+#most valuable config for docker engine
 docker info
 ```
 
@@ -129,7 +131,7 @@ if you would like to get some help from docker about command
 docker <command> # will give you some help with this command
 docker <command> <sub-command> # will give you help with sub command
 
-#equivilant to
+#equivalent to
 
 docker <command> --help 
 docker <command> <sub-command> --help 
@@ -199,13 +201,13 @@ docker ps
 # equivliant to
 docker container ls
 
-# list all containers 
+# list all ruuning & not running containers 
 docker ps -a 
 #or
 docker container ls -a
 
 # stop running container
-docker stop <container-id>
+docker stop <container-id/name>
 
 # start new container
 docker run 
@@ -214,7 +216,7 @@ docker run
 docker start <container-id/name>
 ```
 
-**docker container run always start new container**
+**`docker container run` always start new container**
 
 
 
@@ -253,7 +255,10 @@ b6a16b7bc340        mongo               "/usr/bin/mongod --b…"   8 months ago 
 container have 2 things that unique :
 
 - container id - id that generated when container created.
-- container name - we can specify it , if we don't docker have large vocabulary and he will generate name.
+
+- container name - we can specify it , if we don't docker specify what will happen is that the container will gets default name.
+
+  docker has  large vocabulary and he will generate name.
 
 you can notice that container named ```mongo2``` has container id of ```b6a16b7bc340```
 
@@ -274,11 +279,11 @@ docker container run ?
 ```
 
 1. looks for that image locally in image cache , doesn't find anything.
-2. then looks remote image repository (defaults to docker hub)
-3. downloads the latest version (if version is not specified)
+2. then looks remote image repository (defaults to docker hub).
+3. downloads the latest version (if version is not specified).
 4. Create new container based on that image and prepare to start.
 5. Gives it a virtual IP on private network inside docker engine.
-6. Opens up port 80 on host and forwords to port 80 in continaer.
+6. Opens up port 80 on host and forewords to port 80 in container.
 7. start container by using CMD in the image Dockerfile.
 
 
@@ -290,8 +295,6 @@ docker rm <container-id-1> <container-id-2> <container-id-3>
 # or
 docker delete <container-id-1> <container-id-2> <container-id-3>
 ```
-
-
 
 
 
@@ -314,13 +317,11 @@ aviad	3883	0		0
 
 
 
-
-
-so running container is a process while virtual machine is part of server that gets storage cpu and ram
+so running container is a process on machine while virtual machine is part of server that gets storage cpu and ram.
 
 
 
-homework
+### Assignment
 
 startup 3 containers :
 
@@ -330,17 +331,19 @@ startup 3 containers :
 
 run all of them with detach mode , and specify name.
 
-nginx list to 80:80 , httpd on 8080:80 , mysql on 3306:3306.
+nginx listten to 80:80 , httpd on 8080:80 , mysql on 3306:3306.
 
 pass to mysql environment variable ```MYSQL_RANDOM_ROOT_PASSWORD=yes```
 
 the password will be in the logs 
 
-eventully stop containers and then remove them.
+eventually stop containers and then remove them.
 
 ensure by docker ps -a that removed.
 
 
+
+### Assignment Result
 
 ```bash
 # CREATE CONTAINERS
@@ -357,8 +360,6 @@ docker ps # check that created and running
 docker stop <apache-container-id> <nginx-container-id> <mysql-container-id>
 docker rm <apache-container-id> <nginx-container-id> <mysql-container-id>
 ```
-
-
 
 
 
@@ -389,8 +390,6 @@ b6a16b7bc340        mongo2              1.01%               173.3MiB / 15.41GiB 
 1f516193ecf9        mongo1              0.00%               0B / 0B               0.00%               0B / 0B             0B / 0B             0
 96ed0d8a218e        mongo0              0.96%               149.2MiB / 15.41GiB   0.95%               8.06MB / 53.7MB     52.9MB / 69.5MB     64
 ```
-
-
 
 
 
@@ -429,7 +428,7 @@ docker start -ai ubuntu
 
 ### Docker Network
 
-each container connected to private virtual network called brigde
+each container connected to private virtual network called bridge
 
 each virtual network routes through NAT firewall on host IP
 
@@ -438,8 +437,6 @@ all containers on a virtual network can talk to each other without -p
 best practice is to create a new virtual network for each app
 
 in docker you can easily change network for container at runtime.
-
-
 
 
 
@@ -462,12 +459,6 @@ docker port <container-id>
 
 
 
-Remember ```--publish``` or ```-p```  ?
-
-We're going to dive in.
-
-
-
 ```bash
 docker network ls # show networks
 docker network inspect # detial about specific network
@@ -475,8 +466,6 @@ docker network create --driver # create new virtual network
 docker netowrk connect # change a live running container
 docker network dissconnect # change a live running container
 ```
-
-
 
 
 
@@ -634,7 +623,7 @@ docker network connect <network-id> <container-id>
 docker network connect f70cccbe0f29 782a4c243b12
 
 docker network disconnect <network-id> <container-id>
-docker network connect f70cccbe0f29 782a4c243b12
+docker network disconnect f70cccbe0f29 782a4c243b12
 ```
 
 
@@ -646,8 +635,6 @@ when we create network we can talk to another container by his container name.
 
 
 docker-compose create new network each time.
-
-
 
 
 
@@ -2145,8 +2132,6 @@ when we want to update we just need to run the deploy command , this will deploy
 
 
 
-
-
 ### Swarm Secrets
 
 secrets is all the data that you want to hide and protect like username,password,twitter api key ,ssh key , etc..
@@ -2434,29 +2419,25 @@ diffrent aviliablity
 
 # Kubernetes
 
-Kubernetes = popular container orchestrator.
+Kubernetes usally called `k8s` as meaning of k + 8 letters + s or `kube`.
+
+Kubernetes = or `k8s` popular container orchestrator.
 
 Container Orchestration = Make many servers act like one.
-
-
 
 devolved by Google now is open source.
 
 it's runs on docker,
 
-gives you api/cli to manage containers across servers.
+gives you API / CLI to manage containers across servers.
 
 
 
-kube control 
+top popular way to use k8s is through cloud vendor , that provide k8s as a service.
 
+many vendor make k8s custom we'll call it distro of it.
 
-
-top popular way to use kube is through cloud vendor , that provide kube as a service.
-
-many vendor make kube custom we'll call it distro of it.
-
-like linux when we have kernel and many distro , we have the fundcamitional of linux and then each distro add his unique
+like Linux when we have kernel and many distro upon it  , we have the foundational of Linux and then each distro add his unique
 
 
 
@@ -2464,70 +2445,321 @@ we have it as well in kube when we have many "distro" for : cloud , on-prem,dc ,
 
 
 
-Servers + Chnage rate = Benefit of orchestration
+Servers + Change rate = Benefit of orchestration.
 
-kube is hybrid you can , run it on diffrent places
+k8s is hybrid you can , run it on different places
 
-kube disto : 
+k8s distros : 
 
 - cloud
-- self managment
-  - Docker Enterprise
-  - Rancher
-  - OpenShift
-  - Canocial
-  - VMWare
-  - PKS
+- self management
+  - Docker Enterprise.
+  - Rancher.
+  - OpenShift.
+  - Canocial.
+  - VMWare.
+  - PKS.
 
 
 
-## kube vs swarm :
+## k8s vs swarm :
 
 they both built upon docker run time
 
 swarm is easier to deploy manage
 
-kube more features and flexbility
+k8s more features and flexibility
 
 
 
-swarm advantage 
+swarm advantage :
 
-docker cli
+- docker cli
 
-come from docker company
+- come from docker company
 
-easier to deploy/manage yourself
+- easier to deploy/manage yourself
 
-has 20% of features of kube but solve 80% of use case
+- has 20% of features of k8s but solve 80% of use case
 
-run when docker can be run (windows , arm - embdded , dc , 32-bit)
+- run when docker can be run (windows , arm - embdded , dc , 32-bit)
 
-secure by default 
-
-
-
-kube :
-
-clouds will deploy manage for you
-
-wide adpotion and community 
-
-cover wide sets of use cases 
-
-this is more safe to your career
+- secure by default 
 
 
 
+k8s  :
+
+- clouds will deploy manage for you
+
+- wide adoption and community 
+
+- cover wide sets of use cases 
+
+- this is more safe to your career
 
 
-kubectl = kube control = k8s cli
 
-single server in k8s called node
+## k8s architecture 
 
-kubelet - k8s agent running on nodes
+`kubectl` = kube control = k8s CLI to configure manage cluster.
 
-Control plane / master = is the chrage of running k8s cluster 
+`worker node`- single server in k8s cluster.
 
-(in swarm we have manager)
+`kubelet` - k8s agent running on each node to allow node talks to manager , it needs is local API installation this is not default in docker.
 
+`Control Plane / Master` = is the charge of running k8s cluster (likes manager in swarm) , 
+
+contain all things that master in charge of actually is a group of containers.
+
+in Control Plane we can find :
+
+- API SERVER - the way we talks to cluster.
+- Scheduler - control how how and where your containers are placed on nodes in object called pods.
+- Controller Manager - lookjs at the state of whole cluster , take the orders/specs and determines the diffrence between what you are asking to do and what is going on
+- etcd - distributed storage for key values  , you need odd numbers.
+- coreDNS - control dns
+
+In regular node : 
+
+- kubelet 
+- kube proxy - control networking
+
+
+
+`pod` - one or more containers running together on one node. 
+
+this is the basic unit of deployment , we don't use container but pods.
+
+
+
+`controller` for creating/updating pods and other objects ,validate that what's going on to k8s is what you asked to do.
+
+we have many types of controllers :
+
+- Deployment - control your pods at lower level.
+- ReplicaSet 
+- SatefulSet
+- DeamonSet
+- Job
+- CronJob
+- and much much more
+
+`service` - network endpoint to connect a pod.
+
+`namespaces` - filtered group of objects in cluster.
+
+`Secrets` 
+
+`configmaps`
+
+
+
+## Installation
+
+you don't have to install it , you have 2 free services to play with k8s :
+
+- https://training.play-with-kubernetes.com/
+- https://katacoda.com/
+
+
+
+who is using linux / linux vm 
+
+```bash
+sudo snap install microk8s --classic
+```
+
+now you can acesses to k8s through `mictok8s.kubectl` recommend put alias for `kubectl`.
+
+
+
+## Hello World K8s
+
+we have 3 commands to create pods from kubectl :
+
+- kubetcl run (equivalent to docker run)
+- kubetcl create (create some recsources via cli or yaml)
+- kubetcl apply (create/update anything via YAML)
+
+
+
+verify k8s installed successfully 
+
+```bash
+aviad@aviad-Inspiron-7373:~$ kubectl version
+Client Version: version.Info{Major:"1", Minor:"18", GitVersion:"v1.18.0", GitCommit:"9e991415386e4cf155a24b1da15becaa390438d8", GitTreeState:"clean", BuildDate:"2020-03-25T14:58:59Z", GoVersion:"go1.13.8", Compiler:"gc", Platform:"linux/amd64"}
+Server Version: version.Info{Major:"1", Minor:"18", GitVersion:"v1.18.0", GitCommit:"9e991415386e4cf155a24b1da15becaa390438d8", GitTreeState:"clean", BuildDate:"2020-03-25T14:50:46Z", GoVersion:"go1.13.8", Compiler:"gc", Platform:"linux/amd64"}
+
+```
+
+
+
+let's run nginx
+
+```bash
+kubectl run my-nginx --image nginx
+#pod/my-nginx created
+
+aviad@aviad-Inspiron-7373:~$ kubectl get pods
+NAME       READY   STATUS    RESTARTS   AGE
+my-nginx   1/1     Running   0          64s
+
+# when we use run command this is using deployment controller that creates replica set controller that create the pod.
+
+kubectl delete pod my-nginx # to delete the pod
+
+kubectl get all # list  
+```
+
+
+
+```bash
+kubectl create deployment my-apache --image httpd
+
+kubectl scale deploy/my-apache --replicas 2 
+# or 
+kubectl scale deployment my-apache --replicas 2 
+
+aviad@aviad-Inspiron-7373:~$ kubectl get all
+NAME                             READY   STATUS    RESTARTS   AGE
+pod/my-apache-65fd7bd7db-tpcl7   1/1     Running   0          112s
+pod/my-apache-65fd7bd7db-zq5kn   1/1     Running   0          2m37s
+
+NAME                 TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)   AGE
+service/kubernetes   ClusterIP   10.152.183.1   <none>        443/TCP   47h
+
+NAME                        READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/my-apache   2/2     2            2           2m37s
+
+NAME                                   DESIRED   CURRENT   READY   AGE
+replicaset.apps/my-apache-65fd7bd7db   2         2         2       2m37s
+
+```
+
+
+
+```bash
+aviad@aviad-Inspiron-7373:~$ kubectl logs deployment/my-apache
+Found 2 pods, using pod/my-apache-65fd7bd7db-zq5kn
+AH00558: httpd: Could not reliably determine the server's fully qualified domain name, using 10.1.100.43. Set the 'ServerName' directive globally to suppress this message
+AH00558: httpd: Could not reliably determine the server's fully qualified domain name, using 10.1.100.43. Set the 'ServerName' directive globally to suppress this message
+[Fri Apr 03 22:59:33.797262 2020] [mpm_event:notice] [pid 1:tid 140429150393472] AH00489: Apache/2.4.43 (Unix) configured -- resuming normal operations
+[Fri Apr 03 22:59:33.800669 2020] [core:notice] [pid 1:tid 140429150393472] AH00094: Command line: 'httpd -D FOREGROUND'
+
+# match by label , you can put to various pods same label then gots here all logs from diffrent pods.
+aviad@aviad-Inspiron-7373:~$ kubectl logs -l app=my-apache
+
+AH00558: httpd: Could not reliably determine the server's fully qualified domain name, using 10.1.100.42. Set the 'ServerName' directive globally to suppress this message
+AH00558: httpd: Could not reliably determine the server's fully qualified domain name, using 10.1.100.42. Set the 'ServerName' directive globally to suppress this message
+[Fri Apr 03 22:59:35.231518 2020] [mpm_event:notice] [pid 1:tid 139766717191296] AH00489: Apache/2.4.43 (Unix) configured -- resuming normal operations
+[Fri Apr 03 22:59:35.231623 2020] [core:notice] [pid 1:tid 139766717191296] AH00094: Command line: 'httpd -D FOREGROUND'
+AH00558: httpd: Could not reliably determine the server's fully qualified domain name, using 10.1.100.43. Set the 'ServerName' directive globally to suppress this message
+AH00558: httpd: Could not reliably determine the server's fully qualified domain name, using 10.1.100.43. Set the 'ServerName' directive globally to suppress this message
+[Fri Apr 03 22:59:33.797262 2020] [mpm_event:notice] [pid 1:tid 140429150393472] AH00489: Apache/2.4.43 (Unix) configured -- resuming normal operations
+[Fri Apr 03 22:59:33.800669 2020] [core:notice] [pid 1:tid 140429150393472] AH00094: Command line: 'httpd -D FOREGROUND'
+
+# similar to inspect into conainer
+
+aviad@aviad-Inspiron-7373:~$ kubectl describe pod/my-apache-65fd7bd7db-tpcl7
+Name:         my-apache-65fd7bd7db-tpcl7
+Namespace:    default
+Priority:     0
+Node:         aviad-inspiron-7373/10.100.102.9
+Start Time:   Sat, 04 Apr 2020 00:55:37 +0300
+Labels:       app=my-apache
+              pod-template-hash=65fd7bd7db
+Annotations:  <none>
+Status:       Running
+IP:           10.1.100.42
+IPs:
+  IP:           10.1.100.42
+Controlled By:  ReplicaSet/my-apache-65fd7bd7db
+Containers:
+  httpd:
+    Container ID:   containerd://07c47a20953540957481fbe6cb0345a1a52c07d6ca944605ca4b71d90cf8c499
+    Image:          httpd
+    Image ID:       docker.io/library/httpd@sha256:13aa010584cb3d79d66adf52444494ae5db67faa28d65a1a25e6ddc57f7c0e2a
+    Port:           <none>
+    Host Port:      <none>
+    State:          Running
+      Started:      Sat, 04 Apr 2020 01:59:35 +0300
+    Last State:     Terminated
+      Reason:       Unknown
+      Exit Code:    255
+      Started:      Sat, 04 Apr 2020 00:55:41 +0300
+      Finished:     Sat, 04 Apr 2020 01:10:24 +0300
+    Ready:          True
+    Restart Count:  1
+    Environment:    <none>
+    Mounts:
+      /var/run/secrets/kubernetes.io/serviceaccount from default-token-8zrmn (ro)
+Conditions:
+  Type              Status
+  Initialized       True 
+  Ready             True 
+  ContainersReady   True 
+  PodScheduled      True 
+Volumes:
+  default-token-8zrmn:
+    Type:        Secret (a volume populated by a Secret)
+    SecretName:  default-token-8zrmn
+    Optional:    false
+QoS Class:       BestEffort
+Node-Selectors:  <none>
+Tolerations:     node.kubernetes.io/not-ready:NoExecute for 300s
+                 node.kubernetes.io/unreachable:NoExecute for 300s
+Events:
+  Type     Reason             Age                 From                          Message
+  ----     ------             ----                ----                          -------
+  Normal   Scheduled          77m                 default-scheduler             Successfully assigned default/my-apache-65fd7bd7db-tpcl7 to aviad-inspiron-7373
+  Normal   Pulling            77m                 kubelet, aviad-inspiron-7373  Pulling image "httpd"
+  Normal   Pulled             77m                 kubelet, aviad-inspiron-7373  Successfully pulled image "httpd"
+  Normal   Created            77m                 kubelet, aviad-inspiron-7373  Created container httpd
+  Normal   Started            77m                 kubelet, aviad-inspiron-7373  Started container httpd
+  Warning  MissingClusterDNS  37m (x36 over 77m)  kubelet, aviad-inspiron-7373  pod: "my-apache-65fd7bd7db-tpcl7_default(239330d1-9b47-4f81-b971-0e240a3e34b6)". kubelet does not have ClusterDNS IP configured and cannot create Pod using "ClusterFirst" policy. Falling back to "Default" policy.
+  Normal   SandboxChanged     13m (x2 over 13m)   kubelet, aviad-inspiron-7373  Pod sandbox changed, it will be killed and re-created.
+  Normal   Pulling            13m                 kubelet, aviad-inspiron-7373  Pulling image "httpd"
+  Normal   Pulled             13m                 kubelet, aviad-inspiron-7373  Successfully pulled image "httpd"
+  Normal   Created            13m                 kubelet, aviad-inspiron-7373  Created container httpd
+  Normal   Started            13m                 kubelet, aviad-inspiron-7373  Started container httpd
+  Warning  MissingClusterDNS  32s (x14 over 13m)  kubelet, aviad-inspiron-7373  pod: "my-apache-65fd7bd7db-tpcl7_default(239330d1-9b47-4f81-b971-0e240a3e34b6)". kubelet does not have ClusterDNS IP configured and cannot create Pod using "ClusterFirst" policy. Falling back to "Default" policy.
+
+
+```
+
+
+
+what was happened ?
+
+- deployment controller updated to 2 replicas.
+- ReplicaSet controller sets pod count to 2.
+- control plane assigns node to pod.
+- kubelet sees pod is needed start the container.
+
+``` 
+
+
+
+1.12-1.15
+
+from version 1.15
+
+k8s reduce the functionality of kubetcl run commands and many of the generators , deprecated all of them expect of one 
+
+ now it's very similar in experience to docker run command.
+
+
+```
+
+
+
+# Exposing K8S Ports
+
+remember what is it a `service` ?
+
+is a stable adress for pod(s) , this seats on top of pods and allow 
+
+consider a stateless image-processing backend which is running with 3 replicas. Those replicas are fungible—frontends do not care which backend they use. While the actual Pods that compose the backend set may change, the frontend clients should not need to be aware of that, nor should they need to keep track of the set of backends themselves.
+
+The Service abstraction enables this decoupling
