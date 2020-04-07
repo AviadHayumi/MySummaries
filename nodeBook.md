@@ -426,36 +426,6 @@ const myServer = new MyServer(port);
 
 
 
-### Event Loop
-
-`SetTImeout` - run after x milliseconds
-
-`SetImmediate` - run imminently  
-
-`SetInterval` - run each x milliseconds
-
-
-
-what happens behind the scenes is that  the function that has to be run inserted into queue.
-
-first the synchronous code will be running all the async will be inserted into the quque
-
-
-
-first timers
-
-seconds callbacks
-
-third internal
-
-fourth - all request coming outside , http
-
-
-
-we must not !!! put code with a lot of logic in callback because he will block the cycle or infected different processes.
-
-
-
 ### Streams
 
  
