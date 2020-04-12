@@ -426,6 +426,209 @@ const myServer = new MyServer(port);
 
 
 
-### Streams
+when our file is big , this is may be problematic because this will stuck the event loop.
+
+in this case using streams is preferred.
 
  
+
+```javascript
+    async requestHandler(req,res){
+        if(req.method == 'GET' && req.url == '/file'){
+            const stream = fs.createReadStream('./file.txt');
+            return res.pipe(res);
+        } 
+        return res.end('hello')
+    }
+```
+
+
+
+
+
+### Create CLI
+
+so we have module that capble of encrypt file
+
+```javascript
+const fs = require('fs');
+const crypto = require('crypto');
+
+class Encryption {
+    constructor(){
+        this.algorithm = 'aes-256-ctr';
+        this.password = 'Password used to generate key';
+        this.key = crypto.scryptSync(this.password,'SOmeSalt',32);
+        this.iv = 'myIVstringisnice1'.toString('hex').slice(0,16);
+    }
+
+    encrypt(sourceFileName){
+        const destinationFileName = sourceFileName + '.encrypted';
+        const readStream = fs.createReadStream(sourceFileName);
+        const writeStream = fs.createWriteStream(destinationFileName);
+        const encryptStream = crypto.createCipheriv(this.algorithm,this.key,this.iv);
+        readStream.pipe(encryptStream).pipe(writeStream);
+        writeStream.on('finish',this.onEnd)
+    }
+
+    onEnd(){
+        console.log('Finished!!!');
+    }
+}
+
+module.exports = Encryption;
+```
+
+
+
+`process.argv[0]` - place of node.
+
+`process.argv[1]` - place of js that we are working on.
+
+`process.argv[2]` - arg 1 
+
+`process.argv[3]` - arg 2
+
+
+
+ok so what I want to do is to run `encrypt file.txt` and get as a result `file.txt.enctypted` that will contains encrypted data. 
+
+`/bin/encrypt.js`
+
+```javascript
+#!/usr/bin/env node
+
+const Encrypt = require('../src/encrypt');
+
+const sourceFileName = process.argv[2];
+
+if(!sourceFileName){
+    console.log('please give file name')
+    return;
+}
+
+const encrypt = new Encrypt();
+encrypt.encrypt(sourceFileName)
+```
+
+`package.json`
+
+```json
+"bin": {
+    "encrypt": "./bin/encrypt.js",
+  }
+```
+
+`sudo npm link` 
+
+
+
+now this is working.
+
+
+
+### Sockets
+
+if we would like to handle bi-directional communication and the real time is very important for us , we can use sockets , in sockets the connection not being closed until the client or server is close it.
+
+then client/server can send messages to each other.
+
+```javascript
+const netServer = require('net').Server;
+
+class SocketSever extends netServer {
+    constructor(){
+        super();
+        this.listen('6969');
+        this.on('connection',this.connectionHandler)
+    }
+
+    connectionHandler(socket){
+        console.log(`Someone connected ${socket.remoteAddress}`);
+        this.socket = socket;
+        this.socket.on('data',this.dataHandler);
+        setInterval(() => {
+            const currentTime = new Date().getTime().toString();
+            this.socket.write(currentTime + '\n');
+        }, 500);
+
+        this.socket.write('Weloce to my server');
+    }
+
+    dataHandler(typedData){
+        console.log(`Typed This ${typedData}`);
+    }
+}
+
+module.exports = new SocketSever();
+
+```
+
+
+
+### Path
+
+when we speify path `./imges` the dot is related to the place we ran the node program. 
+
+if we ran node program from diffrent dir this can occur errors because this wont found the path of `/images` . 
+
+what we can do to handle it is to use `__dirname` that we'll return the path of the file.
+
+for example if we have an
+
+- src
+  - modules
+    - routes
+      - shopRoute.js
+    - controllers
+      - shopController.js
+- public
+  - index.html
+- app.js
+
+
+
+if we will try to get file `index.html` from `app.js` by using `./public/index.html` if we'll run `app.js` from diffrent directory we will not find it.
+
+therefore what we'll do is 
+
+```javascript
+const path = require('path');
+
+path.join(__dirname, '../public/index.html')
+```
+
+
+
+### ENV Variables 
+
+we usually don't want to save sensitive data on our program , and also we want to be flexible.
+
+for example i don't want to save my password on database on the code , and also i want it to be flexible between test,dev,pp,prod environments.
+
+Therefore we'll use environment variables. 
+
+this
+
+```javascript
+const connection = mysql.createConnection({
+   host : 'localhost',
+   user : 'root',
+   password : '123456',
+   database : 'test' 
+});
+```
+
+will be replaced with this
+
+```javascript
+const connection = mysql.createConnection({
+   host : process,env.HOST ,
+   user : process,env.USER,
+   password : process,env.PASSWORD,
+   database : process,env.DATABASE
+});
+```
+
+
+

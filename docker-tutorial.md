@@ -2516,7 +2516,7 @@ in Control Plane we can find :
 
 - API SERVER - the way we talks to cluster.
 - Scheduler - control how how and where your containers are placed on nodes in object called pods.
-- Controller Manager - lookjs at the state of whole cluster , take the orders/specs and determines the diffrence between what you are asking to do and what is going on
+- Controller Manager - looks at the state of whole cluster , take the orders/specs and determines the difference between what you are asking to do and what is going on
 - etcd - distributed storage for key values  , you need odd numbers.
 - coreDNS - control dns
 
@@ -2756,10 +2756,650 @@ k8s reduce the functionality of kubetcl run commands and many of the generators 
 
 # Exposing K8S Ports
 
+
+
 remember what is it a `service` ?
 
-is a stable adress for pod(s) , this seats on top of pods and allow 
+is a stable address for pod(s) , this seats on top of pods and allow 
 
-consider a stateless image-processing backend which is running with 3 replicas. Those replicas are fungible—frontends do not care which backend they use. While the actual Pods that compose the backend set may change, the frontend clients should not need to be aware of that, nor should they need to keep track of the set of backends themselves.
+consider a stateless image-processing backed which is running with 3 replicas.
 
-The Service abstraction enables this decoupling
+ Those replicas are fungible—frontends do not care which backend they use. 
+
+While the actual Pods that compose the backend set may change, the frontend clients should not need to be aware of that, nor should they need to keep track of the set of backends themselves.
+
+The Service abstraction enables this decoupling.
+
+
+
+
+
+`kubectl expose` create service for existing pods.
+
+if we need to connect pods we need a service
+
+
+
+`clusterIP` - ClusterIP, which is the default.
+
+In this case, the most important aspect is that it's only
+
+available in the cluster.
+
+This is really about one Kubernetes set
+
+of pods talking to another set of pods.
+
+This gets it's own DNS stress, right.
+
+
+
+when we use `kubectl create deplyment``kubectl create service` what's going on behind the scenes is that a generator creates a yaml file and then create what we've asked for. 
+
+if we would like to see which `yaml` will be created we can run
+
+`kubectl create deployment sample --image nginx --dry-run -o yaml`
+
+dry run = shout the output , not running this command
+
+yaml - represent this in yaml
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment # which controller we create
+metadata: 
+  creationTimestamp: null
+  labels:
+    app: sample
+  name: sample
+spec: 
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sample
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: sample
+    spec:
+      containers: # which containers will be created
+      - image: nginx
+        name: nginx
+        resources: {}
+status: {}
+```
+
+
+
+we can either represent it with `json` 
+
+```json
+aviad@aviad-Inspiron-7373:~$ kubectl create deployment sample --image nginx --dry-run -o json
+W0409 17:00:48.792700    9679 helpers.go:535] --dry-run is deprecated and can be replaced with --dry-run=client.
+{
+    "kind": "Deployment",
+    "apiVersion": "apps/v1",
+    "metadata": {
+        "name": "sample",
+        "creationTimestamp": null,
+        "labels": {
+            "app": "sample"
+        }
+    },
+    "spec": {
+        "replicas": 1,
+        "selector": {
+            "matchLabels": {
+                "app": "sample"
+            }
+        },
+        "template": {
+            "metadata": {
+                "creationTimestamp": null,
+                "labels": {
+                    "app": "sample"
+                }
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "name": "nginx",
+                        "image": "nginx",
+                        "resources": {}
+                    }
+                ]
+            }
+        },
+        "strategy": {}
+    },
+    "status": {}
+}
+
+```
+
+
+
+create job controller.
+
+```yaml
+aviad@aviad-Inspiron-7373:~$ kubectl create job sample --image nginx --dry-run -o yaml
+
+apiVersion: batch/v1
+kind: Job
+metadata:
+  creationTimestamp: null
+  name: sample
+spec:
+  template:
+    metadata:
+      creationTimestamp: null
+    spec:
+      containers:
+      - image: nginx
+        name: sample
+        resources: {}
+      restartPolicy: Never
+status: {}
+```
+
+
+
+create a service
+
+```yaml
+aviad@aviad-Inspiron-7373:~$ kubectl expose deployment httpenv --port 80 --dry-run -o yaml
+
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: httpenv
+  name: httpenv
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    app: httpenv
+status:
+  loadBalancer: {}
+
+```
+
+
+
+today `kubectl run` (up to  version 1.12) not create deployment and replicas this functionality have been reduced and it's only create pod.
+
+usually we'll use it just to run pods and test them.
+
+```yaml
+aviad@aviad-Inspiron-7373:~$ kubectl run test --image nginx --dry-run -o yaml
+W0409 17:24:16.406380    2532 helpers.go:535] --dry-run is deprecated and can be replaced with --dry-run=client.
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: test
+  name: test
+spec:
+  containers:
+  - image: nginx
+    name: test
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+
+```
+
+we can see that this is create an pod.
+
+not controller.
+
+
+
+```yaml
+aviad@aviad-Inspiron-7373:~$ kubectl run test --image nginx --port 80 --expose --dry-run -o yaml
+W0409 17:26:06.090332    4864 helpers.go:535] --dry-run is deprecated and can be replaced with --dry-run=client.
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  name: test
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    run: test
+status:
+  loadBalancer: {}
+---
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: test
+  name: test
+spec:
+  containers:
+  - image: nginx
+    name: test
+    ports:
+    - containerPort: 80
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+
+```
+
+
+
+we can create with run schedule job
+
+```yaml
+aviad@aviad-Inspiron-7373:~$ kubectl run test --image nginx --schedule "*/1 * * * *" --dry-run -o yaml
+Flag --schedule has been deprecated, has no effect and will be removed in the future.
+W0409 17:30:05.852121    9223 helpers.go:535] --dry-run is deprecated and can be replaced with --dry-run=client.
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: test
+  name: test
+spec:
+  containers:
+  - image: nginx
+    name: test
+    resources: {}
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}
+
+```
+
+
+
+
+
+Imperative vs Declarative
+
+
+
+Imperative commands
+
+in this approach we create the cluster by cli commands.
+
+- run
+- expose 
+- scale
+- edit
+- create
+- deployment
+
+create -f file.yml , replace -f replace.yml , delete ...
+
+
+
+declarative 
+
+In this approach we create the cluster by yaml file.
+
+`kubectl apply -f file.yml`
+
+you can also run apply of directory full of yaml files.
+
+`kubectl apply -f myDirectory/`
+
+you also can apply from url
+
+`kubectl apply -f https://bret.run/pod.yml` 
+
+
+
+diff - show changes
+
+similar to swarm stack.
+
+recommend in production.
+
+
+
+let's dive into yaml file.
+
+there will be always :
+
+- apivesrion
+- kind
+- metadata
+- spec
+
+
+
+Create pod , not recommend to production , most useful for testing.
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx
+spec:
+  containers:
+  - name: nginx
+    image: nginx:1.17.3
+    ports:
+    - containerPort: 80
+```
+
+
+
+
+
+create a deployment controller
+
+```yaml
+apiVersion: apps/v1 
+kind: Deployment
+metadata:
+  name: nginx-deployment
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  replicas: 2
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.17.3
+        ports:
+        - containerPort: 80
+```
+
+
+
+service and deployment
+
+use --- to break service and deployment.
+
+```yaml
+apiVersion: v1 # which vesion of yaml for the kind
+kind: Service # what we are going to build
+metadata: # only name is required
+  name: app-nginx-service
+spec:
+  type: NodePort
+  ports:
+  - port: 80
+  selector:
+    app: app-nginx
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-nginx-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: app-nginx
+  template:
+    metadata:
+      labels:
+        app: app-nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.17.3
+        ports:
+        - containerPort: 80
+```
+
+
+
+
+
+to get all `kind`the your cluster support
+
+```yaml
+kubectl api-resources
+
+NAME                              SHORTNAMES   APIGROUP                       NAMESPACED   KIND
+bindings                                                                      true         Binding
+componentstatuses                 cs                                          false        ComponentStatus
+configmaps                        cm                                          true         ConfigMap
+endpoints                         ep                                          true         Endpoints
+events                            ev                                          true         Event
+limitranges                       limits                                      true         LimitRange
+namespaces                        ns                                          false        Namespace
+nodes                             no                                          false        Node
+persistentvolumeclaims            pvc                                         true         PersistentVolumeClaim
+persistentvolumes                 pv                                          false        PersistentVolume
+pods                              po                                          true         Pod
+podtemplates                                                                  true         PodTemplate
+replicationcontrollers            rc                                          true         ReplicationController
+resourcequotas                    quota                                       true         ResourceQuota
+secrets                                                                       true         Secret
+serviceaccounts                   sa                                          true         ServiceAccount
+services                          svc                                         true         Service
+mutatingwebhookconfigurations                  admissionregistration.k8s.io   false        MutatingWebhookConfiguration
+validatingwebhookconfigurations                admissionregistration.k8s.io   false        ValidatingWebhookConfiguration
+customresourcedefinitions         crd,crds     apiextensions.k8s.io           false        CustomResourceDefinition
+apiservices                                    apiregistration.k8s.io         false        APIService
+controllerrevisions                            apps                           true         ControllerRevision
+daemonsets                        ds           apps                           true         DaemonSet
+deployments                       deploy       apps                           true         Deployment
+replicasets                       rs           apps                           true         ReplicaSet
+statefulsets                      sts          apps                           true         StatefulSet
+tokenreviews                                   authentication.k8s.io          false        TokenReview
+localsubjectaccessreviews                      authorization.k8s.io           true         LocalSubjectAccessReview
+selfsubjectaccessreviews                       authorization.k8s.io           false        SelfSubjectAccessReview
+selfsubjectrulesreviews                        authorization.k8s.io           false        SelfSubjectRulesReview
+subjectaccessreviews                           authorization.k8s.io           false        SubjectAccessReview
+horizontalpodautoscalers          hpa          autoscaling                    true         HorizontalPodAutoscaler
+cronjobs                          cj           batch                          true         CronJob
+jobs                                           batch                          true         Job
+certificatesigningrequests        csr          certificates.k8s.io            false        CertificateSigningRequest
+leases                                         coordination.k8s.io            true         Lease
+endpointslices                                 discovery.k8s.io               true         EndpointSlice
+events                            ev           events.k8s.io                  true         Event
+ingresses                         ing          extensions                     true         Ingress
+ingressclasses                                 networking.k8s.io              false        IngressClass
+ingresses                         ing          networking.k8s.io              true         Ingress
+networkpolicies                   netpol       networking.k8s.io              true         NetworkPolicy
+runtimeclasses                                 node.k8s.io                    false        RuntimeClass
+poddisruptionbudgets              pdb          policy                         true         PodDisruptionBudget
+podsecuritypolicies               psp          policy                         false        PodSecurityPolicy
+clusterrolebindings                            rbac.authorization.k8s.io      false        ClusterRoleBinding
+clusterroles                                   rbac.authorization.k8s.io      false        ClusterRole
+rolebindings                                   rbac.authorization.k8s.io      true         RoleBinding
+roles                                          rbac.authorization.k8s.io      true         Role
+priorityclasses                   pc           scheduling.k8s.io              false        PriorityClass
+csidrivers                                     storage.k8s.io                 false        CSIDriver
+csinodes                                       storage.k8s.io                 false        CSINode
+storageclasses                    sc           storage.k8s.io                 false        StorageClass
+volumeattachments                              storage.k8s.io                 false        VolumeAttachment
+```
+
+
+
+```bash
+kubectl api-versions # which api versions cluster supports
+```
+
+before we building a yaml file
+
+we have to figure out which kind of thing we want to build
+
+then check if the cluster support this kind
+
+then check his apiVersion and check if the cluster supports this api version.
+
+
+
+
+
+if you want to get information about `kind` you can run command
+
+instead of going to docs.
+
+```bash
+kubectl explain services
+kubectl explain services.spec # get info about spec
+
+#list all diffrent keys 
+kubectl explain services --recursive
+
+# we can as well do it for deployment controller or whathever you want
+kubectl explain deployment
+
+```
+
+
+
+
+
+labels and annotations 
+
+exists in the `metadata` on `yaml` 
+
+this is an optional 
+
+simple key value
+
+selecting/grouping/filtering objects.
+
+
+
+get logs for pods with common label
+
+`kubectl get pods -l app=nginx`
+
+we can use it with apply , to apply change only for specific label
+
+`kubectl apply -f myfile.yaml -l app=nginx`
+
+label selectors - 
+
+for example when we create service ?
+
+how the service know to which pod to connect ?
+
+by label selectors.
+
+
+
+storage in k8s
+
+put volume in the spec 
+
+statefulsets? 
+
+claim define outside the pod , 
+
+
+
+Ingress 
+
+OSI Layer 7 , DNS Routing
+
+route outside connections based hostnames/urls
+
+Ingress can do it with 3rd library (Nginx , Traefik , HAProxy , F5 , Emroy , Istio , etc..)
+
+sits upon service.
+
+
+
+k8s namespaces
+
+when you have different cluster of k8s in different place (locality , remote vm , cloud vendor)
+
+you can control them from one place through cli by `namespaces`.
+
+
+
+ 
+
+# Docker Security
+
+install official images.
+
+docker bench - scan configuration of docker 
+
+
+
+avoid using root in `Dockerfile` 
+
+```bash
+aviad@aviad-Inspiron-7373:~$ docker run --name mynginx2 -d nginx
+ef15eb6c40860ca62f37dcdbeb083659bee765444f43c6d22ee167af03101056
+aviad@aviad-Inspiron-7373:~$ docker top mynginx2 
+UID                 PID                 PPID                C                   STIME               TTY                 TIME                CMD
+root                5215                5184                7                   04:33               ?                   00:00:00            nginx: master process nginx -g daemon off;
+systemd+            5268                5215                0                   04:33               ?                   00:00:00            nginx: worker process
+
+```
+
+we can notice that this is running as default as root then create systemd+ therefore is safe.
+
+
+
+in `Dockerfile` defaults is using root.
+
+```dockerfile
+FROM node:12-slim
+
+ENV TINI_VERSION v0.10.0
+
+ADD https://github/krallin/tini/releases/download/${TINI_VERSION}/tini /tini
+RUN chmod +x /tini
+ENTRYPOINT ["/tini","--"]
+
+EXPOSE 3000
+
+RUN mkdir /app && chown -R node:node /app
+WORKDIR /app
+
+USER node
+
+COPY --chown-node:node package.json package-lock*.json ./
+RUN npm install && npm cache clean --force
+
+COPY --chown=node:node . .
+CMD ["node","./bin/www"]
+```
+
+
+
+use external scanner that will scan os packages , application dependencies.
+
+you can use microscanner
+
+that add this to your dockerfile
+
+```dockerfile
+ADD https://get.aquasec.com/microscanner /
+RUN chmod +x /microscanner
+RUN /microscanner <TOKEN> [--continue-on-failure]
+```
+
+
+
+features
+
+docker context - connect to another daemon , allows switch them , run commands on all daemons.
+
