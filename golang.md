@@ -1428,7 +1428,7 @@ on process can have multiple threads.
 
 
 
-![image-20200415230344540](/home/aviad/.config/Typora/typora-user-images/image-20200415230344540.png)
+![image-20200415230344540](images/process.png)
 
 
 
