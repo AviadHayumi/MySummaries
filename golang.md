@@ -1454,7 +1454,7 @@ many  go routines execute within a single OS thread
 
 OS schedule Main Thread , and main thread is switching the threads 
 
-![image-20200415230935298](/home/aviad/.config/Typora/typora-user-images/image-20200415230935298.png)
+![image-20200415230935298](images/thread.png)
 
 
 
@@ -1470,7 +1470,7 @@ then each logical processor will be mapped to different OS thread in each core
 
 the programmer cannot determine which Goroutine will be in which Goruntime but can control of number of cores for go (default will be 1).
 
-![image-20200415222511050](/home/aviad/.config/Typora/typora-user-images/image-20200415222511050.png)
+![image-20200415222511050](images/logicalProcessor.png)
 
 
 
@@ -1482,11 +1482,11 @@ Concurrent code is non-deterministic
 
 the code can run each time in different order
 
-![image-20200415232817612](/home/aviad/.config/Typora/typora-user-images/image-20200415232817612.png)
+![image-20200415232817612](images/interleaving.png)
 
 two possibilities of running
 
-![image-20200415232835172](/home/aviad/.config/Typora/typora-user-images/image-20200415232835172.png)
+![image-20200415232835172](images/interleaving_2.png)
 
 this is not happen in go level , but in the machine code level.
 
@@ -1496,7 +1496,7 @@ this is not happen in go level , but in the machine code level.
 
 outcome depends on non-deterministic ordering
 
-![image-20200415233231173](/home/aviad/.config/Typora/typora-user-images/image-20200415233231173.png)
+![image-20200415233231173](images/raceCondition.png)
 
 Race occur due to communication 
 
@@ -1637,7 +1637,7 @@ sending blocks until data is received
 
 receiving blocks until data is sent
 
-![image-20200417030008217](/home/aviad/.config/Typora/typora-user-images/image-20200417030008217.png)
+![image-20200417030008217](images/communication_1.png)
 
 task1 will wait until task2 gets the data.
 
@@ -1647,7 +1647,7 @@ blocking is the same as waiting communication
 
 
 
-![image-20200417030521722](/home/aviad/.config/Typora/typora-user-images/image-20200417030521722.png)
+![image-20200417030521722](images/communication_2.png)
 
 in this code task2 will block until task1 will send data , we don't assign the data thats going on the channel , this is like alternative using wait group.
 
@@ -1671,7 +1671,7 @@ receiving only blocks if buffer of channel is empty
 
 let's assume we have channel with capacity 2
 
-![image-20200417031227732](/home/aviad/.config/Typora/typora-user-images/image-20200417031227732.png)
+![image-20200417031227732](images/capacity_channel.png)
 
 task1 write int to channel , 
 
@@ -1683,7 +1683,7 @@ then task2 wait to another number forever (assume task1 not writing anymore to c
 
 another example
 
-![image-20200417031510776](/home/aviad/.config/Typora/typora-user-images/image-20200417031510776.png)
+![image-20200417031510776](images/capacity_channel_2.png)
 
 task1 will send data
 
@@ -1709,7 +1709,7 @@ then when we using buffer we allow some delay with the producer and consumer.
 
 this allow continue executing without blocking until going to some threshold (capacity of channel)
 
-![image-20200417032022551](/home/aviad/.config/Typora/typora-user-images/image-20200417032022551.png) 
+![image-20200417032022551](images/buffer.png) 
 
 
 
@@ -1735,7 +1735,7 @@ when you using for , and the producer know that he won't pass data he need to ca
 
 Receiving from multiple Gorounites
 
-![image-20200417160212976](/home/aviad/.config/Typora/typora-user-images/image-20200417160212976.png)
+![image-20200417160212976](images/receive_multi_channel.png)
 
 let's assume that t3 need to gets data from t1 and t2 
 
@@ -1876,7 +1876,7 @@ we'll assure that two thread cannot write both to same shared variable.
 
 mutex use the binary semaphore , if flag up shared variable is in use , flag down available to use
 
-![image-20200417164042198](/home/aviad/.config/Typora/typora-user-images/image-20200417164042198.png)
+![image-20200417164042198](images/lock.png)
 
 before using shared variable we will `Lock()` then when we finish we'll `Unlock()` 
 
@@ -1965,9 +1965,9 @@ cannot detect when a subset of Gorounites are deadlocked.
 
 ## Dining Philosophers Problem
 
-![image-20200417182113560](/home/aviad/.config/Typora/typora-user-images/image-20200417182113560.png)
+![image-20200417182113560](images/philo_1.png)
 
-![image-20200417193601884](/home/aviad/.config/Typora/typora-user-images/image-20200417193601884.png)
+![image-20200417193601884](images/philo_2.png)
 
 ```go
 type ChopS struct { sync.Mutex }
