@@ -1,3 +1,5 @@
+
+
 # GoLang
 
 This is going to be mixed summaries of `Coursera course of golang` & the book 
@@ -992,7 +994,7 @@ func main(){
 
 Closure
 
-Clousre = Function + its environment
+Closure = Function + its environment
 
  when you pass function as argument you actually pass his environment also.
 
@@ -1076,6 +1078,939 @@ func main() {
 
 
 ## Classes and Encapsulation
+
+```go
+type MyInt int
+
+func (mi MyInt) DoubleMyInt () int {
+    return int(mi*2)
+}
+
+func main() {
+    v := MyInt(3)
+    fmt.Println(v.DoubleMyInt())
+}
+```
+
+
+
+to connect method and types we have to use reviver
+
+when we look at function ```DoubleMyInt()``` the reviver of the function is ```(mi MyInt)```
+
+now we can use the method with this type , notice that we are doing ```v.DoubleMyInt()```
+
+
+
+when we connect between method and types we have that both will be in same package.
+
+what happens behind the scenes is the `MyInt` transfered to the function `DoubleMyInt` as an argument , 
+
+```DoubleMyInt(mi MyInt)```
+
+this is call by value.
+
+ that copy the entire object to the function.
+
+if we not returning the object and just want to make a change on the object , this will be made on the copy and not on the original object.
+
+usually we will pass a pointer so call by reference will be.
+
+
+
+
+
+we can use the type as struct 
+
+```go
+package main
+
+import (
+	"fmt"
+	"math"
+)
+
+type Point struct {
+	x float64
+	y float64
+}
+
+func (p *Point) DistToOrigin() float64 {
+	f := math.Pow(p.x, 2) + math.Pow(p.y, 2)
+	return math.Sqrt(f)
+}
+
+func main() {
+	p1 := Point{3,4}
+	origin := p1.DistToOrigin()
+	fmt.Println(origin)
+}
+```
+
+
+
+Encapsulation
+
+when we create new package and we give to functions name that not starts with capital letter , this will be private.
+
+
+
+## Polymorphism
+
+golang does not have inheritance.
+
+interface 
+
+```go
+type Shape2D interface {
+    Area() float64
+    Perimeter() float64
+}
+
+type Triangle {...}
+
+func (t Triangle) Area() float64 {...}
+func (t Triangle) Perimeter() float64 {...}
+```
+
+in go we don't specify explicitly that some struct is satisfied an interface , we just implement the interface functions.
+
+```go
+package main
+
+import "fmt"
+
+type Speaker interface {
+	Speak()
+}
+
+type Dog struct {name string}
+func (d Dog) Speak() {
+	fmt.Println(d.name)
+}
+
+type Cat struct {name string}
+func (d Cat) Speak() {
+	fmt.Println(d.name)
+}
+
+func main(){
+	var dog Speaker =  Dog{"Alf"}
+	var cat Speaker =  Cat{"Cat"}
+
+	speakers := []Speaker{dog,cat}
+
+	for _, speaker := range speakers {
+		speaker.Speak()
+	}
+}
+```
+
+
+
+in go , if instance is not initialized and he is implement interface , the calling of the functions of the interfaces will be still available
+
+```go
+func (d *Dog) Speak() {
+    if d == nil {
+        fmt.Print("<noise>")
+    }else{
+        fmt.Println(d.name)
+    }
+}
+
+func main() {
+    var s1 Speaker
+    var d1 *Dog
+    s1 = d1
+    s1.Speak()
+}
+
+//output <noise>
+```
+
+
+
+if you want to specify function that will accept any type as a parameter use the empty interface
+
+```go
+func PrintMe(val interface{}){
+    fmt.Println(val)
+}
+```
+
+
+
+type assertions 
+
+```go
+func DrawShape (s Shape2D) bool {
+    rect, ok := s.(Rectangle)
+    if ok {
+        DrawRect(rect)
+    	return
+    }
+    tri, ok := s.(Triangle)
+    if ok {
+        DrawTriangle(tri)
+ 		return
+    }
+    DrawRegularShape(s)
+}
+//or
+func DrawShape (s Shape2D) bool {
+    switch:= sh:= s.(type) {
+        case Rectengle:
+        	DrawRect(sh)
+    	case Triangle:
+           DrawTriangle(sh)
+   	   default :
+          DrawRegularShape(sh)
+    }
+}
+```
+
+
+
+The Error Interface
+
+```go
+type error interface{
+    Error() string
+}
+```
+
+
+
+
+
+# Course 3 - Concurrency
+
+parallel is to execute 2 or more things in the same time
+
+At a time t an instruction is being performed for both core 1 and core 2
+
+you have to have more than one core/processors/cpu to allow to allow parallel.
+
+Parallel is about speedup.
+
+some tasks are not parallelize 
+
+
+
+Why use concurrency ?
+
+
+
+Von Neumann Bottleneck 
+
+in the past (5 years old) software has been optimized by get new faster processors 
+
+CPU use ram , ram always slower than CPU then bottleneck is created.
+
+ what people have done to prevent this is using cache on the chip to speed up things.
+
+this is change for couple reasons :
+
+
+
+Moore's Law
+
+this is an observation
+
+Predicted that transistor density would double every two years
+
+Increase of destiny of transistor would lead to increase in speed
+
+
+
+power wall
+
+Transistors consume power when they switch 
+
+Increasing transistor density leads to increased power consumption.
+
+smaller transistors use less power but density scaling is much faster
+
+high power leads to high temperature 
+
+usually the processor is being cool because there is a high temperature and we don't want it be melt
+
+```P = α * CFV²```
+
+`α` is percent of time switching 
+
+`c` relate to size of transistor
+
+`f` is the clock frequency 
+
+`v` voltage from low to high (example 0 to 5 Volt)
+
+
+
+Dennard Scaling
+
+when transistor gets smaller voltage gets smaller
+
+then power consumption and temperature is low.
+
+the problem is that we cannot put the voltage too low because we have threshold
+
+then small the transistor and put more is not relevant. 
+
+
+
+we cannot scale more than that without let the hardware melt.
+
+
+
+So how do we scale ? 
+
+How we can optimize everything ?
+
+
+
+increase number of cores this trend is apparent today.
+
+code made to execute on multiple cores.
+
+concurrency is to tell the program how it's going to be divided amongst cores.
+
+
+
+## Process 
+
+process is an instance of running program (like running power point)
+
+things unique to a process :
+
+- Memory
+  - code
+  - stack 
+  - heap
+  - shared libraries
+- Registers 
+  - Program counter , data regs ,stack ptr...
+
+Processes are switched quickly each process run 20 ms 
+
+Operating system must give processes fair access to resources
+
+
+
+Scheduling
+
+Operating system schedules processes for execution.
+
+This gives illusion of parallel execution (if we have one core)
+
+we have some algorithm for scheduling , for example we have round robin that will give each process 20ms.
+
+sometimes we give to process higher priority , give more time to some processes 
+
+when os switch to another process this called context switching
+
+when we doing context switching we pause the state(memory,registers) of process 
+
+when we resume process we take his state and continue after x time pause again 
+
+
+
+Thread vs Processes
+
+Context switching can take time because data will be taken to the memory , reading stuff from memory back into registers , this is a lot of memory accesses and this is can be slow.
+
+
+
+Threads is light weight processes , Thread is a like process but it shares some of the contexts with other threads in the process 
+
+on process can have multiple threads.
+
+
+
+![image-20200415230344540](/home/aviad/.config/Typora/typora-user-images/image-20200415230344540.png)
+
+
+
+We can notice that we have process with 3 threads 
+
+each thread contain his own data (Stack,registers,code) but they also share data.
+
+these threads have unique context but is much less than the unique context between different processes.
+
+context switch between **threads** is fast.
+
+
+
+OS instead scheduling processes is scheduling threads by threads 
+
+
+
+Threads and Gorounites
+
+go routine is a thread in go
+
+many  go routines execute within a single OS thread 
+
+OS schedule Main Thread , and main thread is switching the threads 
+
+![image-20200415230935298](/home/aviad/.config/Typora/typora-user-images/image-20200415230935298.png)
+
+
+
+Go run time scheduler it does scheduling within an OS thread  
+
+Goruntime chose different Goroutine each time  
+
+Goruntime using logical processor that mapped to a thread.
+
+if we want to allow parallel we can put another Logical Processor according to cores , 
+
+then each logical processor will be mapped to different OS thread in each core 
+
+the programmer cannot determine which Goroutine will be in which Goruntime but can control of number of cores for go (default will be 1).
+
+![image-20200415222511050](/home/aviad/.config/Typora/typora-user-images/image-20200415222511050.png)
+
+
+
+
+
+## Interleaving
+
+Concurrent code is non-deterministic 
+
+the code can run each time in different order
+
+![image-20200415232817612](/home/aviad/.config/Typora/typora-user-images/image-20200415232817612.png)
+
+two possibilities of running
+
+![image-20200415232835172](/home/aviad/.config/Typora/typora-user-images/image-20200415232835172.png)
+
+this is not happen in go level , but in the machine code level.
+
+
+
+## Race Conditions 
+
+outcome depends on non-deterministic ordering
+
+![image-20200415233231173](/home/aviad/.config/Typora/typora-user-images/image-20200415233231173.png)
+
+Race occur due to communication 
+
+
+
+## GOROUTINE
+
+one Goroutine is automatically created to run the main function
+
+other are created using to go keyword
+
+```go
+func foo(){
+    fmt.Println("foo")
+}
+
+func main(){
+    a := 1
+    go foo()
+    a = 2
+}
+```
+
+this create new thread then `foo` is executed in this thread.
+
+a go routine is exists when is code complete.
+
+when the main is complete all other GoRoutine exit
+
+```go
+func main(){
+    go fmt.Printf("New routine")
+    fmt.Printf("Main routine")
+}
+```
+
+what will occur is that only Main routine will be display , because the main routine finish the code and close all other GoRoutine.
+
+
+
+Bad practice that handle this issue is to block the main thread by sleeping , go won't let time waist than he would go to other thread.
+
+one thread is waiting the scheduler will move to another thread.
+
+```go
+func main(){
+    go fmt.Printf("New routine")
+    time.Sleep(100 * time.Millisecond)
+    fmt.Printf("Main routine")
+}
+```
+
+this is bad because we can not assume time to sleep that is ensure finish of another thread.
+
+the OS may schedules another thread when we specify sleep
+
+time is non deterministic
+
+
+
+```go
+func main(){
+    x := 1
+	go func(){
+        x+=1
+		fmt.Println(x)
+	}()    
+    x+=1
+    fmt.Println(x)
+}
+
+//this code is non deterministic , if we would like to print this when x = 1
+
+func main(){
+	x := 1
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func(){
+		x++
+		fmt.Println(x)
+		wg.Done()
+	}()
+	wg.Wait()
+	x++
+	fmt.Println(x)
+}
+
+```
+
+now we can control synchronization of threads  
+
+synchronization will be used to restrict bad interleaving
+
+`waitGroup` force GoRoutine wait to other GoRounites
+
+when we using `wg.Wait()` we wait that counter will be 0
+
+when we do `wg.add()` we increment the counter , and when we `wg.Done()` we decrement the counter.
+
+
+
+## Communication GoRounites
+
+transfer data between Gorounites is by channels
+
+channels are typed 
+
+```go
+c := make(chan int) //create channel
+c <- 3 //send data
+x := <- c //recive data from channel
+```
+
+
+
+```go
+func prod(num1 , num2 int ,channel chan int){
+    channel <- num1*num2
+}
+
+func main() {
+    channel := make(chan int)
+    go prod(1,2,channel)
+    go prod(3,4,channel)
+    a := <- channel
+    b := <- channel
+    fmt.Println(a*b)
+}
+
+//output 24
+```
+
+Blocking on channels 
+
+channel default state is unbuffered `make(chan int) ` when we not pass another argument to the make.
+
+sending blocks until data is received
+
+receiving blocks until data is sent
+
+![image-20200417030008217](/home/aviad/.config/Typora/typora-user-images/image-20200417030008217.png)
+
+task1 will wait until task2 gets the data.
+
+as well the task2 will block the code until gets data
+
+blocking is the same as waiting communication 
+
+
+
+![image-20200417030521722](/home/aviad/.config/Typora/typora-user-images/image-20200417030521722.png)
+
+in this code task2 will block until task1 will send data , we don't assign the data thats going on the channel , this is like alternative using wait group.
+
+
+
+Buffered Channels
+
+unbuffered channel have no capacity but channel can have limited number of objects 
+
+```go
+channel := make(chan int , 3)
+```
+
+
+
+now sending only blocks when channel is full
+
+receiving only blocks if buffer of channel is empty
+
+
+
+let's assume we have channel with capacity 2
+
+![image-20200417031227732](/home/aviad/.config/Typora/typora-user-images/image-20200417031227732.png)
+
+task1 write int to channel , 
+
+then task2 gets the number
+
+then task2 wait to another number forever (assume task1 not writing anymore to channel)
+
+
+
+another example
+
+![image-20200417031510776](/home/aviad/.config/Typora/typora-user-images/image-20200417031510776.png)
+
+task1 will send data
+
+then task2 will receive data
+
+task1 will send data
+
+task2 not going to receive data anymore
+
+task1 is blocked forever , waiting someone take his number
+
+
+
+#### main use of buffering 
+
+producer faster than consumer
+
+let's assume that we have Goroutine that produce data to channel , and Goroutine that consume the data
+
+let's assume that producer is faster than consumer
+
+then when we using buffer we allow some delay with the producer and consumer.
+
+this allow continue executing without blocking until going to some threshold (capacity of channel)
+
+![image-20200417032022551](/home/aviad/.config/Typora/typora-user-images/image-20200417032022551.png) 
+
+
+
+
+
+to continue read from channel we can 
+
+```go
+for value := range channel {
+    fmt.Println(value)
+}
+```
+
+this will quit the loop when we'll close the channel
+
+```go
+close(channel)
+```
+
+when you using for , and the producer know that he won't pass data he need to call close.
+
+
+
+Receiving from multiple Gorounites
+
+![image-20200417160212976](/home/aviad/.config/Typora/typora-user-images/image-20200417160212976.png)
+
+let's assume that t3 need to gets data from t1 and t2 
+
+
+
+```go
+num1 := <- c1
+num2 := <- c2
+fmt.Println(a*b)
+```
+
+this are blocking , num1 will block until gets data
+
+
+
+when we want data either c1 or c2
+
+```go
+select {
+    case a = <- c1 :
+    	fmt.Println(a)
+    case b = <- c2 :
+    	fmt.Println(b)
+}
+```
+
+
+
+we can either use it with send and receive
+
+```go
+select {
+    case a = <- inchan:
+    	fmt.Println("received a")
+	case outchan <- b :
+    	fmt.Println("sent b")
+}
+```
+
+
+
+common use is to use abort channel when we want to exit.
+
+```go
+for {
+    select {
+        case a <- c:
+        	fmt.Println(a)
+    	case <- abortChannel :
+        	return
+    }
+}
+```
+
+abort channel will let us exit infinite loop.
+
+
+
+another way not to block is using default
+
+```go
+select {
+	case a = <- c1:
+    	fmt.Println(a)
+    case b = <- c2:
+    	fmt.Println(b)
+    default:
+    	fmt.Println("nop")
+}
+```
+
+
+
+sharing variables in threads
+
+```go
+package main
+
+import (
+	"fmt"
+	"sync"
+)
+
+var i = 0
+var wg sync.WaitGroup
+
+func inc(){
+	i = i +1
+	wg.Done()
+}
+
+func main()  {
+	wg.Add(2)
+	go inc()
+	go inc()
+	wg.Wait()
+	fmt.Println(i)
+}
+```
+
+what can occur here is that both inc will run in the same time and they both increment 1.
+
+the output will be 2 instead of 3.
+
+running this , will give different output because the interleaving 
+
+to prevent this we'll use mutex
+
+```go
+package main
+
+import (
+	"fmt"
+	"sync"
+)
+
+var i = 0
+var wg sync.WaitGroup
+var mut sync.Mutex
+
+func inc(){
+    mut.Lock()
+	i = i +1
+    mut.Unlock()
+	wg.Done()
+}
+
+func main()  {
+	wg.Add(2)
+	go inc()
+	go inc()
+	wg.Wait()
+	fmt.Println(i)
+}
+```
+
+we'll assure that two thread cannot write both to same shared variable.
+
+mutex use the binary semaphore , if flag up shared variable is in use , flag down available to use
+
+![image-20200417164042198](/home/aviad/.config/Typora/typora-user-images/image-20200417164042198.png)
+
+before using shared variable we will `Lock()` then when we finish we'll `Unlock()` 
+
+if another thread will try to access while shared variable is being locked 
+
+the lock will block until unlock.
+
+
+
+### Synchronous Initialization
+
+when we want to initial some object , 
+
+we could perform the initial before starting with all others GoRounites but what happens when we initial when the Gorounites is actually up and working 
+
+we can use `Sync.Once` `once.Do(function)` 
+
+function will executed only one time even if exists in multiple go routines 
+
+all calls for `once.Do(function)`will block until the first returns 
+
+```go
+var wg sync.WaitGroup
+
+var on sync.Once
+
+func setup(){
+    fmt.Println("Init")
+}
+
+func dostuff(){
+    on.Do(setup)
+    fmt.Println("hello")
+    wg.Done()
+}
+
+func main() {
+    wg.Add(2)
+    go dostuff()
+    go dostuff()
+    wg.Wait()
+}
+
+/*
+	setup will called only one time
+	output :
+				Init
+				hello
+				hello
+*/
+```
+
+
+
+### Deadlock
+
+when GoRoutine 1 depend on GoRoutine 2 and GoRoutine 2 depend on GoRoutine 1
+
+can occur cause waiting channel , locking , unlocking etc...
+
+example for dead lock
+
+```go
+func dostuff(c1 chan int , c2 chan int){
+    <- c1 //wait to receive
+    c2 <- 1 // write to another channel
+    wg.Done() //decrement wg count
+}
+
+func main(){
+    ch1 := make(chan int)
+    ch2 := make(chan int)
+	
+    wg.Add(2)
+    go dostuff(ch1,ch2)
+    go dostuff(ch2,ch1)
+    wg.Wait()
+}
+```
+
+go runtime can detect this and stopped with an error.
+
+cannot detect when a subset of Gorounites are deadlocked.
+
+
+
+## Dining Philosophers Problem
+
+![image-20200417182113560](/home/aviad/.config/Typora/typora-user-images/image-20200417182113560.png)
+
+![image-20200417193601884](/home/aviad/.config/Typora/typora-user-images/image-20200417193601884.png)
+
+```go
+type ChopS struct { sync.Mutex }
+type Philo struct { leftCS,rightCS *ChopS}
+var wg sync.WaitGroup
+
+func (p Philo) eat(){
+    for {
+        p.leftCS.Lock()
+        p.rightCS.Lock()
+    
+        fmt.Println("eating")
+        
+        p.leftCS.Unlock()
+        p.rightCS.Unlock()        
+    }
+    wg.Done()
+}
+
+func main(){
+    CSticks := make([]*ChopS,5)
+    for i:=0; i<5; i++ {
+        CSticks[i] = new(ChopS)
+    }
+    
+    philos := make([]*Philo,5)
+    for i:=0; i<5; i++ {
+        philo[i] = &Philo{
+            Csticks[i],
+            Csticks[(i+1)%5]
+        }
+    }
+
+    wg.Add(5)
+    for _,p := range philos {
+        go p.eat()
+    }
+    wg.Wait()
+}
+
+```
+
+
 
 
 
