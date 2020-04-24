@@ -1956,3 +1956,585 @@ resolver equivalent controller.
 
 
 
+in graphql we only use `POST` request 
+
+
+
+let's implment this in our project
+
+```javascript
+npm i graphql
+npm i express-graphql
+```
+
+
+
+create schema 
+
+```schema.js``` 
+
+```javascript
+const { buildSchema } = require('graphql');
+
+module.exports = buildSchema(`
+    type TestData {
+        text: String!
+        views: Int!
+    }
+
+    type RootQuery {
+        hello: TestData!
+    }
+
+    schema {
+        query: RootQuery 
+    }
+`);
+```
+
+`resolvers.js`
+
+```javascript
+module.exports = {
+    hello(){
+        return {
+            text : 'Hello world!',
+            views : 1245
+        }
+    }
+};
+```
+
+```app.js```
+
+```javascript
+const graphqlHttp = require('express-graphql');
+const graphqlSchema = require('../graphql/graphql/schema');
+const graphqlResolver = require('../graphql/graphql/resolvers');
+
+app.use('/graphql',graphqlHttp({
+  schema : graphqlSchema,
+  rootValue : graphqlResolver
+}));
+```
+
+
+
+```bash
+curl --location --request POST 'localhost:8080/graphql' \
+--header 'Content-Type: application/json' \
+--header 'Content-Type: text/plain' \
+--data-raw '{
+	"query" : "{ hello { text  } }"
+}'
+
+#output 
+{
+    "data": {
+        "hello": {
+            "text": "Hello world!"
+        }
+    }
+}
+```
+
+
+
+let's now add ability to add user
+
+therefore we'll add mutation
+
+```schema.js```
+
+```javascript
+const { buildSchema } = require('graphql');
+
+module.exports = buildSchema(`
+    type Post {
+        _id: ID!
+        title: String!
+        content: String!
+        imageUrl: String!
+        creator: User!
+        createdAt: String!
+        updatedAt: String!
+    }
+
+    type User {
+        _id: ID!
+        name: String!
+        email: String!
+        password: String
+        status: String!
+        posts: [Post!]!
+    }
+
+    input UserInputData {
+        email: String!
+        name: String!
+        password: String!
+    }
+
+    type RootQuery {
+        hello: String
+    }
+
+    type RootMutation {
+        createUser(userInput: UserInputData): User!
+    }
+
+    schema {
+        query: RootQuery
+        mutation: RootMutation
+    }
+`);
+```
+
+```resolvers.js```
+
+```javascript
+const User = require("../models/user")
+const bcrypt = require("bcryptjs");
+
+module.exports = {
+    createUser: async function({userInput}, req){
+        const email = userInput.email;
+        const name = userInput.name;
+        const password = userInput.password;
+
+        const exisitingUser = await User.findOne({email: email})
+        if(exisitingUser){
+            const error = new Error("User exists already!");
+            throw error
+        }
+        const hashedPassword = await bcrypt.hash(password,12);
+
+        const newUser = new User({
+            "email" : email,
+            "password": hashedPassword,
+            "name": name
+        })
+
+        const createdUser = await newUser.save()
+        return {...createdUser._doc,_id: createdUser._id.toString()}
+    }
+};
+```
+
+```json
+mutation {
+  createUser(userInput: {
+      email: "aviados1@g.com", 
+      name: "Aviad", 
+      password: "pass"}) {
+    email
+    _id
+  }
+}
+
+//output
+
+{
+  "data": {
+    "createUser": {
+      "email": "aviados1@g.com",
+      "_id": "5e9c647fc99acd0ec7b4b927"
+    }
+  }
+}
+```
+
+
+
+just for fun let's add option to see graphql more visual instead of using tool like postman
+
+```app.js```
+
+```javascript
+app.use('/graphql',graphqlHttp({
+  schema : graphqlSchema,
+  rootValue : graphqlResolver,
+  graphiql : true
+}));
+```
+
+![image-20200419175104222](/home/aviad/.config/Typora/typora-user-images/image-20200419175104222.png)
+
+
+
+> > Validation
+> >
+> > add example more mutation and queries
+
+
+
+using variables
+
+```javascript
+var myHeaders = new Headers();
+myHeaders.append("Content-Type", "application/json");
+myHeaders.append("Authorization", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI1ZTljYmU0NzczZGU4ODA2ZjkwOGFkNGYiLCJlbWFpbCI6ImF2aWFkQGVtYWlsLmNvbSIsImlhdCI6MTU4NzMzMTYzNCwiZXhwIjoxNTg3MzM1MjM0fQ.iq8dgDM4GmsgvL0a99XQ9La6e6rK-Xd61Qa2lRAApTs");
+myHeaders.append("Content-Type", "application/json");
+
+var graphql = JSON.stringify({
+  query: `query{
+				post(id: "5e9cbefb8933501395c98293\"){title}}`,
+  variables: {}
+})
+var requestOptions = {
+  method: 'POST',
+  headers: myHeaders,
+  body: graphql,
+  redirect: 'follow'
+};
+
+fetch("localhost:8080/graphql", requestOptions)
+  .then(response => response.text())
+  .then(result => console.log(result))
+  .catch(error => console.log('error', error));
+```
+
+either this or this
+
+```javascript
+var myHeaders = new Headers();
+myHeaders.append("Content-Type", "application/json");
+myHeaders.append("Authorization", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiI1ZTljYmU0NzczZGU4ODA2ZjkwOGFkNGYiLCJlbWFpbCI6ImF2aWFkQGVtYWlsLmNvbSIsImlhdCI6MTU4NzMzNjM1MSwiZXhwIjoxNTg3MzM5OTUxfQ.utDI6R9a4llLa5a3Rh5y3Ky8rqBptUTS9iH6-0wQQ8o");
+myHeaders.append("Content-Type", "application/json");
+
+var graphql = JSON.stringify({
+  query: "query FetchPosts($numPage:Int) {\n    posts(page: $numPage){\n        posts{\n          _id\n        }\n    }\n}",
+  variables: {"numPage":0}
+})
+var requestOptions = {
+  method: 'POST',
+  headers: myHeaders,
+  body: graphql,
+  redirect: 'follow'
+};
+
+fetch("localhost:8080/graphql", requestOptions)
+  .then(response => response.text())
+  .then(result => console.log(result))
+  .catch(error => console.log('error', error));
+```
+
+
+
+
+
+## Deployment
+
+### env varibles
+
+```javascript
+process.env //here all env varibles
+process.env.MONGO_USER
+process.env.MONGO_PASSWORD
+process.env.PORT 
+```
+
+we can put env varibles on the os or use `nodemon.json` , usally this will be for development
+
+```json
+{
+    "env" :{
+        "MONGO_USER":"aviad",
+        "MONGO_PASSOWRD":"1q2w3e4r",
+        "PORT" : 3000
+    }
+}
+```
+
+```package.json```
+
+```javascript
+"scritps":{
+    "start" : "node app.js"
+    "start:dev" : "nodemon app.js" //because we call nodemon this will use the file of 										nodmeon.json
+}
+```
+
+we also can do it in other way
+
+```package.json```
+
+```javascript
+"scripts" : {
+    "start" : "MONGO_USER=aviad PORT 3000 node app.js"
+}
+```
+
+when we on production we should use
+
+`NODE_ENV = production`
+
+because node will handle the app more efficiently.
+
+
+
+### secure headers
+
+for secure header
+
+add headers to avoid attack patters or security issues 
+
+```javascript
+npm i --save helmet
+```
+
+`app.js`
+
+```javascript
+const helmet = require("helmet")
+
+app.use(helmet())
+```
+
+
+
+### Compression Assets
+
+```javascript
+npm i --save comperession
+```
+
+`app.js`
+
+```javascript
+const comperssion = require("comperssion")
+
+app.use(comperssion())
+```
+
+
+
+### Logging
+
+```javascript
+npm i --save morgan
+```
+
+`app.js`
+
+```javascript
+const morgan = require("morgan")
+
+app.use(morgan('combined'));
+```
+
+this will automatically logs good stuff , we can logs not only to the console , also to fs, etc..
+
+`app.js`
+
+```javascript
+const morgan = require("morgan")
+const fs = require("fs")
+
+const accessLogStream = fs.createWriteStream(path.join(__dirname,'app.log'),{flags:'a'}) //a means append and to ovveride the file
+
+app.use(morgan('combined',{stream:accessLogStream}));
+```
+
+
+
+# Testing
+
+we are going to use `mocha` and `chai` 
+
+```javascript
+npm i --save-dev mocha chai
+```
+
+now in package.json we can put command for testing
+
+`package.json` 
+
+```javascript
+"scripts":{
+    "test" : "mocha"
+}
+```
+
+mocha will search directory called test and run his test files
+
+
+
+chai responsible to validate tests
+
+mocha responsible for running all tests
+
+`test/start.js`
+
+```javascript
+const expect = require('chai').expect
+
+it('should add numbers correctly', ()=>{
+    const num1 = 2;
+    const num2 = 3;
+
+    const actualResult = num1 + num2;
+    const expectedResult = 5;
+
+    expect(actualResult).to.equal(expectedResult)
+})
+```
+
+output will be
+
+```aviad@aviad-Inspiron-7373:~/workspace/tutoirals/nodejs/udemy/testing$ npm test
+
+> nodejs-complete-guide@1.0.0 test /home/aviad/workspace/tutoirals/nodejs/udemy/testing
+> mocha
+
+
+
+  ✓ should add numbers correctly
+
+  1 passing (3ms)
+
+
+┌─────────────────────────────────────────────────────────┐
+│                 npm update check failed                 │
+│           Try running with sudo or get access           │
+│          to the local update config store via           │
+│ sudo chown -R $USER:$(id -gn $USER) /home/aviad/.config │
+└─────────────────────────────────────────────────────────┘
+aviad@aviad-Inspiron-7373:~/workspace/tutoirals/nodejs/udemy/testing$ npm test
+
+> nodejs-complete-guide@1.0.0 test /home/aviad/workspace/tutoirals/nodejs/udemy/testing
+> mocha
+
+
+
+  ✓ should add numbers correctly
+
+  1 passing 
+```
+
+
+
+to group tests we can use `describe`
+
+```javascript
+const authMiddleware = require('../middleware/is-auth')
+const expect = require('chai').expect
+
+describe(`Auth middleware`,()=>{
+    it('should throw an error if no auth header is present', ()=>{
+        const req = {
+            get : function(){
+                return null;
+            }
+        }
+    
+        expect(authMiddleware.bind(this,req,{},()=>{})).to.throw('Not authenticated.')
+    })
+    
+    it('should throw an error if the authorization header is only one string', ()=>{
+        const req = {
+            get : function(headerName){
+                return 'xyz';
+            }
+        }
+    
+        expect(authMiddleware.bind(this,req,{},()=>{})).to.throw()
+    })
+})
+
+```
+
+
+
+for inject result for method we can do 
+
+```javascript
+ it("should yield a userID after decoding the token",()=>{
+        const req = {
+            get : function(){
+                return 'Barer somejwttoken';
+            }
+        }
+        jwt.verify = function() {
+            return {userId:'abc'}
+        }
+        authMiddleware(req,{},()=>{})
+        expect(req).to.have.property('userId')
+
+    })
+```
+
+have you notice ? 
+
+I take the `verify()` and override with new function.
+
+`jwt` this is not my code ,but code from other module.
+
+I can also do it in other way 
+
+```javascript
+npm i --save-dev sinon
+```
+
+```javascript
+const sinon = require("sinon")
+... 
+
+it("should yield a userID after decoding the token",()=>{
+        const req = {
+            get : function(){
+                return 'Barer somejwttoken';
+            }
+        }
+       
+        sinon.stub(jwt,'verify');
+        jwt.verify.returns({
+            userId: 'abc'
+        });
+    
+        authMiddleware(req,{},()=>{})
+        expect(req).to.have.property('userId')
+    	expect(jwt.verify.called).to.be.true; // assure that this function was called
+		jwt.verify.restore(); //here we restore to original function
+    })
+```
+
+
+
+let's now test route of api
+
+> > async function test
+
+
+
+hooks
+
+```javascript
+//execue before all tests in describe
+before(()=>{
+
+})
+
+//execute before each test
+beforeEach(()=>{
+
+})
+
+//execue after all tests in describe
+after(()=>{
+
+})
+
+//execute after each test
+afterEach(()=>{
+
+})
+
+
+
+```
+
+
+
+
+
